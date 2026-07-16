@@ -1,0 +1,23 @@
+import { renderToBuffer } from "@react-pdf/renderer";
+import { getAssessmentApiContext, reportAssessmentName } from "@/lib/assessmentApi";
+import { buildUpsaYearSummaryReport } from "@/lib/pdf/reportData";
+import { getAllAssessmentClassResults } from "@/lib/upsa/data";
+import { SkspsUpsaYearSummaryReportTemplate } from "@/pdf/templates/SkspsUpsaYearSummaryReportTemplate";
+import { schoolReportFilename } from "@/lib/reportFilename";
+
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ year: string; assessment: string }> },
+) {
+  const { school, period } = await getAssessmentApiContext(params);
+  const results = await getAllAssessmentClassResults(school, period);
+  const report = buildUpsaYearSummaryReport(period, results);
+  const buffer = await renderToBuffer(SkspsUpsaYearSummaryReportTemplate({ report, school }));
+
+  return new Response(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${schoolReportFilename(school, `RINGKASAN TAHUN - ${reportAssessmentName(period)}.pdf`)}"`,
+    },
+  });
+}

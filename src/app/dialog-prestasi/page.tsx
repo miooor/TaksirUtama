@@ -1,0 +1,161 @@
+import Link from "next/link";
+import { BarChart3, Download, FileText, HeartHandshake, Presentation } from "lucide-react";
+import { AppShell } from "@/components/shared/AppShell";
+import { MetricCard } from "@/components/shared/MetricCard";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { requireSchoolContext } from "@/lib/auth";
+import { listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
+import { getAllPbdInterventions, listPbdSubjectTabs } from "@/lib/pbd/data";
+import { getAllAssessmentClassResults } from "@/lib/upsa/data";
+import { getLanguage, text } from "@/lib/i18n";
+
+const subjectNames: Record<string, string> = {
+  BM: "Bahasa Melayu",
+  BI: "Bahasa Inggeris",
+  MATE: "Matematik",
+  SAINS: "Sains",
+  SEJARAH: "Sejarah",
+  "P.ISLAM": "Pendidikan Islam",
+  "P.MORAL": "Pendidikan Moral",
+  PJK: "Pendidikan Jasmani dan Kesihatan",
+  PSV: "Pendidikan Seni Visual",
+  MUZIK: "Pendidikan Muzik",
+  RBT: "Reka Bentuk dan Teknologi",
+  "B.ARAB": "Bahasa Arab",
+  "B.CHINA": "Bahasa Cina",
+  "B.TAMIL": "Bahasa Tamil",
+};
+
+export default async function DialogPrestasiPage({ searchParams }: { searchParams: Promise<{ year?: string; assessment?: string }> }) {
+  const language = await getLanguage();
+  const school = await requireSchoolContext();
+  const { assessmentPeriods, defaultPbdPeriod, pbdPeriods } = school;
+  const params = await searchParams;
+  const requestedYear = params.year;
+  const assessment = params.assessment === "uasa" ? "uasa" : "upsa";
+  const assessmentLabel = assessment.toUpperCase();
+  const years = listPeriodYears(assessmentPeriods, pbdPeriods);
+  const year = requestedYear && years.includes(requestedYear) ? requestedYear : defaultPbdPeriod?.year ?? years[0] ?? "2026";
+  const pbdPeriod = resolvePbdPeriod(pbdPeriods, year);
+  const assessmentPeriod = resolveAssessmentPeriod(assessmentPeriods, year, assessment);
+
+  if (!pbdPeriod) {
+    return (
+      <AppShell>
+        <PageHeader eyebrow="DP" title="Dialog Prestasi Ketua Panitia" description={`Data PBD ${year} tidak tersedia.`} icon={Presentation} />
+      </AppShell>
+    );
+  }
+
+  const [subjects, interventionData, assessmentResults] = await Promise.all([
+    listPbdSubjectTabs(school, pbdPeriod),
+    getAllPbdInterventions(school, pbdPeriod),
+    assessmentPeriod ? getAllAssessmentClassResults(school, assessmentPeriod) : Promise.resolve([]),
+  ]);
+  const assessmentCodes = new Set(assessmentResults.flatMap((result) => result.students.flatMap((student) => student.subjects.map((subject) => subject.subjectCode))));
+  const sortedSubjects = [...subjects].sort((a, b) => a.localeCompare(b, "ms"));
+
+  return (
+    <AppShell>
+      <PageHeader
+        eyebrow={`DP ${year}`}
+        title={text(language, { ms: "Pusat Muat Turun Dialog Prestasi Ketua Panitia", en: "Subject Head Dialog Prestasi Download Centre" })}
+        description={text(language, {
+          ms: "Pilih subjek dan muat turun tiga dokumen lengkap untuk pembentangan Dialog Prestasi.",
+          en: "Choose a subject and download the three documents prepared for Dialog Prestasi.",
+        })}
+        icon={Presentation}
+        actions={<StatusBadge tone="success">{sortedSubjects.length} {text(language, { ms: "subjek", en: "subjects" })}</StatusBadge>}
+      />
+
+      <nav className="mt-6 inline-flex rounded-lg border bg-white p-1" aria-label="Pentaksiran Dialog Prestasi">
+        {(["upsa", "uasa"] as const).map((item) => {
+          const selected = assessment === item;
+          const available = Boolean(resolveAssessmentPeriod(assessmentPeriods, year, item));
+          return (
+            <Link
+              key={item}
+              href={`/dialog-prestasi?year=${year}&assessment=${item}`}
+              className={`rounded-md px-5 py-2 text-sm font-semibold transition ${selected ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+            >
+              {item.toUpperCase()}
+              {!available ? <span className="ml-2 text-[10px] font-normal opacity-75">Belum tersedia</span> : null}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <MetricCard label="Analisa Perbandingan TP" value={sortedSubjects.length} />
+        <MetricCard label={`Analisa Perbandingan ${assessmentLabel}`} value={sortedSubjects.filter((code) => resolveAssessmentSubjectCode(code, assessmentCodes)).length} />
+        <MetricCard label="Murid intervensi" value={new Set(interventionData.entries.map((entry) => `${entry.normalizedStudentName}|${entry.normalizedClassName}`)).size} tone="warning" />
+      </div>
+
+      <section className="mt-6 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
+        <p className="font-semibold">Set dokumen setiap Ketua Panitia</p>
+        <p className="mt-1">1. Analisa Perbandingan TP semua tahun · 2. Analisa Perbandingan {assessmentLabel} Tahun 4, 5 dan 6 · 3. Intervensi dan Isu disusun mengikut tahun dan kelas.</p>
+      </section>
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        {sortedSubjects.map((subjectCode) => {
+          const assessmentSubjectCode = resolveAssessmentSubjectCode(subjectCode, assessmentCodes);
+          const interventionCount = interventionData.entries.filter((entry) => entry.subjectCode === subjectCode).length;
+          const base = `/api/dialog-prestasi/${year}/subjects/${encodeURIComponent(subjectCode)}`;
+          const comparisonHref = `/api/dialog-prestasi/${year}/${assessment}/subjects/${encodeURIComponent(subjectCode)}/comparison`;
+          return (
+            <article key={subjectCode} className="rounded-xl border bg-white p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-teal-700">{subjectCode}</p>
+                  <h2 className="mt-1 text-lg font-semibold">{subjectNames[subjectCode] ?? subjectCode}</h2>
+                </div>
+                <StatusBadge tone={interventionCount ? "warning" : "success"}>{interventionCount} intervensi</StatusBadge>
+              </div>
+
+              <div className="mt-5 grid gap-3">
+                <DownloadCard
+                  href={`/api/pbd/periods/${year}/reports/subjects/${encodeURIComponent(subjectCode)}/pdf`}
+                  icon={BarChart3}
+                  title="1. Analisa Perbandingan TP"
+                  description="Carta bar dan jadual perbandingan kelas bagi setiap tahun menggunakan data PBD."
+                />
+                <DownloadCard
+                  href={assessmentSubjectCode && assessmentPeriod ? comparisonHref : null}
+                  icon={FileText}
+                  title={`2. Analisa Perbandingan ${assessmentLabel}`}
+                  description={assessmentSubjectCode && assessmentPeriod ? `Carta dan jadual gred Tahun 4, 5 dan 6 (${assessmentSubjectCode}).` : `Tiada subjek ${assessmentLabel} yang sepadan atau tempoh belum tersedia.`}
+                />
+                <DownloadCard
+                  href={`${base}/intervention`}
+                  icon={HeartHandshake}
+                  title="3. Intervensi dan Isu"
+                  description="Senarai murid TP1 dan TP2, masalah dan intervensi mengikut tahun serta kelas."
+                />
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </AppShell>
+  );
+}
+
+export function DownloadCard({ href, icon: Icon, title, description }: { href: string | null; icon: typeof Download; title: string; description: string }) {
+  const content = (
+    <>
+      <span className="rounded-md bg-teal-50 p-2 text-teal-700"><Icon className="h-4 w-4" /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{title}</span>
+        <span className="mt-0.5 block text-xs text-slate-500">{description}</span>
+      </span>
+      <Download className="h-4 w-4 shrink-0" />
+    </>
+  );
+  return href ? (
+    <a href={href} className="flex items-center gap-3 rounded-lg border p-3 transition hover:border-teal-300 hover:bg-teal-50/40">{content}</a>
+  ) : (
+    <div className="flex cursor-not-allowed items-center gap-3 rounded-lg border bg-slate-50 p-3 text-slate-400">{content}</div>
+  );
+}
