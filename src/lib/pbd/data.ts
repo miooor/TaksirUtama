@@ -77,8 +77,6 @@ export async function listPbdSubjectTabs(school: SchoolContext, period: PbdPerio
 }
 
 async function loadAllPbdRecords(school: SchoolContext, period: PbdPeriod, subjects?: string[]) {
-  const databaseRecords = await databaseRecordsFor(school, period);
-  if (databaseRecords) return subjects ? databaseRecords.filter((record) => subjects.includes(record.subjectCode)) : databaseRecords;
   assertPbdSource(period);
   const subjectTabs = subjects ?? await listPbdSubjectTabs(school, period);
   if (hasGoogleCredentials) {
@@ -98,6 +96,8 @@ async function loadAllPbdRecords(school: SchoolContext, period: PbdPeriod, subje
 }
 
 export async function getAllPbdRecords(school: SchoolContext, period: PbdPeriod, subjects?: string[]) {
+  const databaseRecords = await databaseRecordsFor(school, period);
+  if (databaseRecords) return subjects ? databaseRecords.filter((record) => subjects.includes(record.subjectCode)) : databaseRecords;
   if (subjects) return loadAllPbdRecords(school, period, subjects);
   return unstable_cache(
     () => loadAllPbdRecords(school, period),
@@ -107,16 +107,16 @@ export async function getAllPbdRecords(school: SchoolContext, period: PbdPeriod,
 }
 
 async function loadAllPbdInterventions(school: SchoolContext, period: PbdPeriod) {
-  if (isDatabaseConfigured() && await usesDatabasePbdSource(school.id)) {
-    const context = await getActorContext();
-    if (context?.school.id === school.id) return { entries: [], issues: [] };
-  }
   const subjects = await listPbdSubjectTabs(school, period);
   const results = await Promise.all(subjects.map((subject) => getPbdSubjectInterventions(school, period, subject)));
   return { entries: results.flatMap((result) => result.entries), issues: results.flatMap((result) => result.issues) };
 }
 
 export async function getAllPbdInterventions(school: SchoolContext, period: PbdPeriod) {
+  if (isDatabaseConfigured() && await usesDatabasePbdSource(school.id)) {
+    const context = await getActorContext();
+    if (context?.school.id === school.id) return { entries: [], issues: [] };
+  }
   return unstable_cache(
     () => loadAllPbdInterventions(school, period),
     ["all-pbd-interventions", ...pbdCacheIdentity(school, period)],

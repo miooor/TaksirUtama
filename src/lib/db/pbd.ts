@@ -75,6 +75,25 @@ function requireDatabase() {
   return getDatabase();
 }
 
+async function ensureDatabaseSchool(context: ActorContext) {
+  const school = context.school;
+  const config = {
+    ...school,
+    assessmentPeriods: school.assessmentPeriods.map((period) => ({ ...period, spreadsheetId: "" })),
+    pbdPeriods: school.pbdPeriods.map((period) => ({ ...period, spreadsheetId: "" })),
+  };
+  await requireDatabase()`
+    INSERT INTO schools (id, code, slug, name, clerk_organization_id, config_json)
+    VALUES (${school.id}, ${school.code}, ${school.slug}, ${school.name}, ${school.clerkOrganizationId ?? null}, ${JSON.stringify(config)}::jsonb)
+    ON CONFLICT (id) DO UPDATE SET
+      code = EXCLUDED.code,
+      slug = EXCLUDED.slug,
+      name = EXCLUDED.name,
+      clerk_organization_id = EXCLUDED.clerk_organization_id,
+      updated_at = now()
+  `;
+}
+
 export async function usesDatabasePbdSource(schoolId: string) {
   if (!isDatabaseConfigured()) return false;
   const rows = await getDatabase()`SELECT pbd_source_mode FROM schools WHERE id = ${schoolId} LIMIT 1`;
@@ -151,6 +170,7 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
 export async function createDatabasePbdClass(context: ActorContext, raw: unknown) {
   const input = classInput.parse(raw);
   const sql = requireDatabase();
+  await ensureDatabaseSchool(context);
   const schoolId = context.school.id;
   const yearId = `${schoolId}:${input.year}`;
   await sql.transaction((txn) => [

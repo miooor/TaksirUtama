@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 260" role="img" aria-labelledby="title">
+  <title id="title">Taksir Utama</title>
+  <rect width="1200" height="260" fill="#ffffff"/>
+  <path fill="#183a37" d="M54 47h152v24H54zm0 44h152v24H54zm0 44h96v24H54z"/>
+  <circle cx="190" cy="147" r="24" fill="#d8aa45"/>
+  <text x="250" y="105" fill="#183a37" font-family="Arial, sans-serif" font-size="52" font-weight="700">TAKSIR UTAMA</text>
+  <text x="254" y="149" fill="#53625f" font-family="Arial, sans-serif" font-size="24">Sistem Analisa Kurikulum</text>
+  <path stroke="#d8aa45" stroke-width="7" d="M54 205h1092"/>
+</svg>
