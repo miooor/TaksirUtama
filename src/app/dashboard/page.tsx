@@ -4,6 +4,7 @@ import { AppShell } from "@/components/shared/AppShell";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { hasGoogleCredentials } from "@/lib/config/env";
+import { usesDatabasePbdSource } from "@/lib/db/pbd";
 import { requireSchoolContext } from "@/lib/auth";
 import { assessmentPath, createPlaceholderAssessmentPeriod, createPlaceholderPbdPeriod, listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
 import { listPbdClassesFromRecords, listPbdSubjectTabs, getAllPbdRecords } from "@/lib/pbd/data";
@@ -107,10 +108,11 @@ export default async function DashboardPage({
   const pbdPeriod = resolvePbdPeriod(pbdPeriods, selectedYear) ?? createPlaceholderPbdPeriod(selectedYear);
   const upsaHref = assessmentPath(upsaPeriod, "/classes");
   const pbdHref = `/pbd/periods/${pbdPeriod.year}`;
+  const useDatabasePbd = await usesDatabasePbdSource(school.id);
   const [upsaLoad, pbdSubjectsLoad, pbdRecordsLoad] = await Promise.all([
     upsaPeriod.spreadsheetId ? getAllAssessmentClassResults(school, upsaPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: new Error("UPSA belum dikonfigurasi") }),
-    pbdPeriod.spreadsheetId ? listPbdSubjectTabs(school, pbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: new Error("PBD belum dikonfigurasi") }),
-    pbdPeriod.spreadsheetId ? getAllPbdRecords(school, pbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: new Error("PBD belum dikonfigurasi") }),
+    useDatabasePbd || pbdPeriod.spreadsheetId ? listPbdSubjectTabs(school, pbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: new Error("PBD belum dikonfigurasi") }),
+    useDatabasePbd || pbdPeriod.spreadsheetId ? getAllPbdRecords(school, pbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: new Error("PBD belum dikonfigurasi") }),
   ]);
   const upsaResults = upsaLoad.data;
   const pbdSubjects = pbdSubjectsLoad.data;
@@ -215,6 +217,7 @@ export default async function DashboardPage({
           </dl>
           <div className="mt-5 flex gap-2 text-sm">
             <Link href={pbdHref} className="action-accent">{t.openPbd}</Link>
+            {useDatabasePbd ? <Link href={`/pbd/entry?year=${pbdPeriod.year}`} className="action-neutral">{language === "en" ? "Enter PBD" : "Isi PBD"}</Link> : null}
           </div>
         </section>
       </div>

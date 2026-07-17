@@ -1,5 +1,8 @@
 import { unstable_cache } from "next/cache";
 import { hasGoogleCredentials } from "@/lib/config/env";
+import { getActorContext } from "@/lib/auth/actor";
+import { getDatabasePbdRecords, getDatabasePbdSetup, usesDatabasePbdSource } from "@/lib/db/pbd";
+import { isDatabaseConfigured } from "@/lib/db/client";
 import type { SchoolContext } from "@/lib/config/schools";
 import type { PbdPeriod } from "@/lib/config/periods";
 import { DataSourceError } from "@/lib/dataSourceError";
@@ -19,7 +22,17 @@ function assertPbdSource(period: PbdPeriod) {
   }
 }
 
+async function databaseRecordsFor(school: SchoolContext, period: PbdPeriod) {
+  if (!isDatabaseConfigured()) return null;
+  const context = await getActorContext();
+  if (!context || context.school.id !== school.id) return null;
+  if (!await usesDatabasePbdSource(school.id)) return null;
+  return getDatabasePbdRecords(context, period.year, period.semester ?? "1");
+}
+
 export async function getPbdSubjectRecords(school: SchoolContext, period: PbdPeriod, subjectCode: string) {
+  const databaseRecords = await databaseRecordsFor(school, period);
+  if (databaseRecords) return databaseRecords.filter((record) => record.subjectCode === subjectCode);
   assertPbdSource(period);
   try {
     const values = hasGoogleCredentials
@@ -46,7 +59,14 @@ export async function getPbdSubjectInterventions(_school: SchoolContext, period:
   return values ? parsePbdInterventionSheet(values, subjectCode) : { entries: [], issues: [] };
 }
 
-export async function listPbdSubjectTabs(_school: SchoolContext, period: PbdPeriod) {
+export async function listPbdSubjectTabs(school: SchoolContext, period: PbdPeriod) {
+  if (isDatabaseConfigured() && await usesDatabasePbdSource(school.id)) {
+    const context = await getActorContext();
+    if (context?.school.id === school.id) {
+      const setup = await getDatabasePbdSetup(context, period.year, period.semester ?? "1");
+      return setup.subjects.map((subject) => subject.code);
+    }
+  }
   assertPbdSource(period);
   const names = hasGoogleCredentials
     ? await getSpreadsheetMetadata(period.spreadsheetId)
@@ -57,6 +77,8 @@ export async function listPbdSubjectTabs(_school: SchoolContext, period: PbdPeri
 }
 
 async function loadAllPbdRecords(school: SchoolContext, period: PbdPeriod, subjects?: string[]) {
+  const databaseRecords = await databaseRecordsFor(school, period);
+  if (databaseRecords) return subjects ? databaseRecords.filter((record) => subjects.includes(record.subjectCode)) : databaseRecords;
   assertPbdSource(period);
   const subjectTabs = subjects ?? await listPbdSubjectTabs(school, period);
   if (hasGoogleCredentials) {
@@ -85,6 +107,10 @@ export async function getAllPbdRecords(school: SchoolContext, period: PbdPeriod,
 }
 
 async function loadAllPbdInterventions(school: SchoolContext, period: PbdPeriod) {
+  if (isDatabaseConfigured() && await usesDatabasePbdSource(school.id)) {
+    const context = await getActorContext();
+    if (context?.school.id === school.id) return { entries: [], issues: [] };
+  }
   const subjects = await listPbdSubjectTabs(school, period);
   const results = await Promise.all(subjects.map((subject) => getPbdSubjectInterventions(school, period, subject)));
   return { entries: results.flatMap((result) => result.entries), issues: results.flatMap((result) => result.issues) };
