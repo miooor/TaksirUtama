@@ -26,7 +26,8 @@ Keep the private registry and credentials in an approved password manager. Never
 
 ## Workbook templates
 
-- [UPSA/UASA template](/templates/templat-upsa-uasa-v1.xlsx)
+- [UPSA template](/templates/templat-upsa-v1.xlsx)
+- [UASA template](/templates/templat-uasa-v1.xlsx)
 - [PBD template](/templates/templat-pbd-v1.xlsx)
 
 Change `schoolCode` in each workbook's `_CONFIG` tab before onboarding. Share private workbooks read-only with `GOOGLE_SERVICE_ACCOUNT_EMAIL`.

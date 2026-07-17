@@ -22,8 +22,11 @@ export type UpsaStudentResult = {
 };
 
 export type UpsaClassResult = {
+  assessmentName?: string;
+  schoolCode?: string;
   className: string;
   teacherName: string;
+  headteacherName?: string;
   students: UpsaStudentResult[];
 };
 

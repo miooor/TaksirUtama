@@ -15,7 +15,8 @@
       { "year": "2026", "assessment": "uasa", "spreadsheetId": "UASA_SHEET_ID", "examName": "UASA 2026", "slipTitle": "UASA 2026", "enabled": true, "default": true, "availableFrom": "2026-10-01T00:00:00+08:00" }
     ],
     "pbdPeriods": [
-      { "year": "2026", "spreadsheetId": "PBD_SHEET_ID", "reportName": "PBD 2026", "enabled": true, "default": true }
+      { "year": "2026", "semester": "1", "spreadsheetId": "PBD_S1_SHEET_ID", "reportName": "PBD Pertengahan 2026", "enabled": true, "default": true },
+      { "year": "2026", "semester": "2", "spreadsheetId": "PBD_S2_SHEET_ID", "reportName": "PBD Akhir 2026", "enabled": true, "default": false }
     ]
   }
 ]

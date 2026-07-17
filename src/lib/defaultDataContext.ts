@@ -12,6 +12,6 @@ export async function requireDefaultPbdContext() {
 export async function requireDefaultUpsaContext() {
   const school = await requireSchoolContext();
   const period = school.defaultUpsaPeriod;
-  if (!period) throw new DataSourceError("workbook_inaccessible", "UPSA is not configured.", "assessment");
+  if (!period) throw new DataSourceError("workbook_inaccessible", "UPSA is not configured.", "upsa");
   return { school, period };
 }

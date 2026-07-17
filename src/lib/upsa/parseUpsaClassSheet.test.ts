@@ -2,6 +2,30 @@ import { describe, expect, it } from "vitest";
 import { parseUpsaClassSheet } from "@/lib/upsa/parseUpsaClassSheet";
 
 describe("parseUpsaClassSheet", () => {
+  it("parses the row 6-10 class metadata and accepts SUBJEK as the pupil-name column header", () => {
+    const result = parseUpsaClassSheet([
+      [], [], [], [], [],
+      ["PENTAKSIRAN", "UPSA"],
+      ["KOD SEKOLAH", "BBB8314"],
+      ["KELAS :", "4 ANGSANA"],
+      ["NAMA GURU KELAS :", "NORFARAHANI BINTI MAD DAHARI"],
+      ["NAMA GURU BESAR:", "SHAMSINAR HAYATI BINTI MOHD SHITH"],
+      ["BIL", "SUBJEK", "BM", "GRED"],
+      ["", "", 100, ""],
+      [1, "MURID CONTOH", 82, "A"],
+    ], "KELAS SANDARAN");
+
+    expect(result).toMatchObject({
+      assessmentName: "UPSA",
+      schoolCode: "BBB8314",
+      className: "4 ANGSANA",
+      teacherName: "NORFARAHANI BINTI MAD DAHARI",
+      headteacherName: "SHAMSINAR HAYATI BINTI MOHD SHITH",
+    });
+    expect(result.students).toHaveLength(1);
+    expect(result.students[0]).toMatchObject({ bil: "1", name: "MURID CONTOH" });
+  });
+
   it("treats BA, BTSK, and BCSK as one required alternative-language subject", () => {
     const result = parseUpsaClassSheet([
       ["BIL", "NAMA", "BM", "GRED", "BA", "GRED", "BTSK", "GRED", "BCSK", "GRED", "MATE", "GRED"],

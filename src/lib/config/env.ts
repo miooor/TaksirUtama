@@ -13,6 +13,7 @@ const envSchema = z.object({
   CRON_SECRET: z.preprocess((value) => value === "" ? undefined : value, z.string().min(16).optional()),
   WORKBOOK_ENCRYPTION_KEY: z.preprocess((value) => value === "" ? undefined : value, z.string().min(43).optional()),
   NEXT_PUBLIC_ASSESSMENT_TEMPLATE_URL: z.preprocess((value) => value === "" ? undefined : value, z.string().url().optional()),
+  NEXT_PUBLIC_UASA_TEMPLATE_URL: z.preprocess((value) => value === "" ? undefined : value, z.string().url().optional()),
   NEXT_PUBLIC_PBD_TEMPLATE_URL: z.preprocess((value) => value === "" ? undefined : value, z.string().url().optional()),
 });
 

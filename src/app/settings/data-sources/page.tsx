@@ -38,7 +38,8 @@ export default async function DataSourcesPage() {
             <li>4. Tampal pautan dan uji. Sumber lama kekal aktif sehingga sumber baharu lulus.</li>
           </ol>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
-            <Link href={env.NEXT_PUBLIC_ASSESSMENT_TEMPLATE_URL ?? "/templates/templat-upsa-uasa-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat UPSA/UASA</Link>
+            <Link href={env.NEXT_PUBLIC_ASSESSMENT_TEMPLATE_URL ?? "/templates/templat-upsa-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat UPSA</Link>
+            <Link href={env.NEXT_PUBLIC_UASA_TEMPLATE_URL ?? "/templates/templat-uasa-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat UASA</Link>
             <Link href={env.NEXT_PUBLIC_PBD_TEMPLATE_URL ?? "/templates/templat-pbd-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat PBD</Link>
           </div>
         </div>

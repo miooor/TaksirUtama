@@ -73,7 +73,7 @@ async function checkWorkbooks(schools) {
   const results = [];
   for (const school of schools) {
     const sources = [
-      ...school.assessmentPeriods.map((period) => ({ label: `${period.assessment.toUpperCase()} ${period.year}`, id: period.spreadsheetId, type: "assessment" })),
+      ...school.assessmentPeriods.map((period) => ({ label: `${period.assessment.toUpperCase()} ${period.year}`, id: period.spreadsheetId, type: period.assessment })),
       ...school.pbdPeriods.map((period) => ({ label: `PBD ${period.year}`, id: period.spreadsheetId, type: "pbd" })),
     ];
     for (const source of sources) {

@@ -60,6 +60,7 @@ export async function validateWorkbookConnection(
   type: WorkbookSourceType,
   year: string,
   spreadsheetId: string,
+  semester?: "1" | "2",
 ): Promise<WorkbookValidationResult> {
   try {
     const configValues = await fetchSheetValues(spreadsheetId, "'_CONFIG'!A1:B20");
@@ -73,8 +74,8 @@ export async function validateWorkbookConnection(
       };
     }
 
-    const expectedType = type === "pbd" ? "pbd" : "assessment";
-    const findings = validateWorkbookConfig(configValues, school.code, expectedType);
+    const expectedType = type;
+    const findings = validateWorkbookConfig(configValues, school.code, expectedType, year, semester);
     const dataTabs = type === "pbd"
       ? tabs.filter((tab) => tab !== "_CONFIG")
       : tabs.filter((tab) => validClassPattern.test(tab));

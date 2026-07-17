@@ -47,6 +47,20 @@ export default async function AssessmentClassPage({
         }
       />
 
+      <dl className="mt-6 grid gap-3 rounded-lg bg-white p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          [text(language, { ms: "Pentaksiran", en: "Assessment" }), result.assessmentName || assessmentLabel(period)],
+          [text(language, { ms: "Kod sekolah", en: "School code" }), result.schoolCode || school.code],
+          [text(language, { ms: "Guru kelas", en: "Class teacher" }), result.teacherName],
+          [text(language, { ms: "Guru besar", en: "Headteacher" }), result.headteacherName || school.headteacher.name],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dt className="text-slate-500">{label}</dt>
+            <dd className="mt-1 font-medium text-slate-900">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
       <div className="mt-6 grid gap-4 md:grid-cols-5">
         {[
           { label: text(language, { ms: "Murid", en: "Pupils" }), value: analysis.pupilCount },

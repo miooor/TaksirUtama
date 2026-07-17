@@ -13,10 +13,10 @@ import { assessmentCacheIdentity } from "@/lib/tenantCache";
 
 function assertAssessmentSource(period: AssessmentPeriod) {
   if (!period.spreadsheetId) {
-    throw new DataSourceError("workbook_inaccessible", "Assessment workbook is not configured.", "assessment");
+    throw new DataSourceError("workbook_inaccessible", "Assessment workbook is not configured.", period.assessment);
   }
   if (process.env.NODE_ENV === "production" && !hasGoogleCredentials) {
-    throw new DataSourceError("credentials_missing", "Google Sheets credentials are not configured.", "assessment");
+    throw new DataSourceError("credentials_missing", "Google Sheets credentials are not configured.", period.assessment);
   }
 }
 
@@ -32,14 +32,14 @@ export async function getAssessmentClassResult(
       : await getPublicWorkbookSheetValues(period.spreadsheetId, className);
     if (!values) {
       if (process.env.NODE_ENV !== "production") return parseUpsaClassSheet(demoUpsaValues, className);
-      throw new DataSourceError("sheet_missing", `Assessment class tab ${className} was not found.`, "assessment");
+      throw new DataSourceError("sheet_missing", `Assessment class tab ${className} was not found.`, period.assessment);
     }
     const findings = validateAssessmentClassSheet(values, className);
-    if (hasFatalFindings(findings)) throw new DataSourceError("schema_invalid", findings[0]!.message, "assessment");
+    if (hasFatalFindings(findings)) throw new DataSourceError("schema_invalid", findings[0]!.message, period.assessment);
     return parseUpsaClassSheet(values, className);
   } catch (error) {
     if (error instanceof DataSourceError) throw error;
-    throw new DataSourceError("workbook_inaccessible", `Assessment data could not be loaded for ${school.code}.`, "assessment");
+    throw new DataSourceError("workbook_inaccessible", `Assessment data could not be loaded for ${school.code}.`, period.assessment);
   }
 }
 
@@ -55,11 +55,12 @@ async function loadAllAssessmentClassResults(school: SchoolContext, period: Asse
       if (!values) return [];
       return values.map((sheetValues, index) => {
         const findings = validateAssessmentClassSheet(sheetValues, classes[index]!);
-        if (hasFatalFindings(findings)) throw new DataSourceError("schema_invalid", findings[0]!.message, "assessment");
+        if (hasFatalFindings(findings)) throw new DataSourceError("schema_invalid", findings[0]!.message, period.assessment);
         return parseUpsaClassSheet(sheetValues, classes[index]!);
       });
-    } catch {
-      throw new DataSourceError("workbook_inaccessible", `Assessment data could not be loaded for ${school.code}.`, "assessment");
+    } catch (error) {
+      if (error instanceof DataSourceError) throw error;
+      throw new DataSourceError("workbook_inaccessible", `Assessment data could not be loaded for ${school.code}.`, period.assessment);
     }
   }
   return Promise.all(classes.map((className) => getAssessmentClassResult(school, period, className)));

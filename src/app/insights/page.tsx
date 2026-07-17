@@ -62,7 +62,7 @@ export default async function SchoolInsightsPage({
   const language = await getLanguage();
   const school = await requireSchoolContext();
   if (!school.defaultUpsaPeriod || !school.defaultPbdPeriod) {
-    throw new DataSourceError("workbook_inaccessible", "UPSA and PBD must be configured before insights are available.", "assessment");
+    throw new DataSourceError("workbook_inaccessible", "UPSA and PBD must be configured before insights are available.", "upsa");
   }
   const { subject, year, className } = await searchParams;
   const selectedYear = parseYear(year);

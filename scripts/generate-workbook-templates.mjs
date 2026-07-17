@@ -12,12 +12,14 @@ function configSheet(type) {
     ["schemaVersion", "1"],
     ["schoolCode", "GANTI_DENGAN_KOD_SEKOLAH"],
     ["workbookType", type],
+    ["year", "GANTI_DENGAN_TAHUN"],
+    ["semester", "GANTI_DENGAN_SEMESTER"],
   ]);
 }
 
-const assessment = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(assessment, configSheet("assessment"), "_CONFIG");
-XLSX.utils.book_append_sheet(assessment, XLSX.utils.aoa_to_sheet([
+const upsa = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(upsa, configSheet("upsa"), "_CONFIG");
+XLSX.utils.book_append_sheet(upsa, XLSX.utils.aoa_to_sheet([
   ["KELAS:", "1 CONTOH"],
   ["NAMA GURU KELAS :", "NAMA GURU"],
   [], [], [], [], [], [], [], [],
@@ -25,7 +27,19 @@ XLSX.utils.book_append_sheet(assessment, XLSX.utils.aoa_to_sheet([
   ["", "", 100, "", 100, "", 100, "", 100, ""],
   [1, "NAMA MURID", "", "", "", "", "", "", "", ""],
 ]), "1 CONTOH");
-XLSX.writeFile(assessment, resolve(outputDir, "templat-upsa-uasa-v1.xlsx"));
+XLSX.writeFile(upsa, resolve(outputDir, "templat-upsa-v1.xlsx"));
+
+const uasa = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(uasa, configSheet("uasa"), "_CONFIG");
+XLSX.utils.book_append_sheet(uasa, XLSX.utils.aoa_to_sheet([
+  ["KELAS:", "1 CONTOH"],
+  ["NAMA GURU KELAS :", "NAMA GURU"],
+  [], [], [], [], [], [], [], [],
+  ["BIL", "NAMA", "BM", "GRED", "BI", "GRED", "MATE", "GRED", "SAINS", "GRED"],
+  ["", "", 100, "", 100, "", 100, "", 100, ""],
+  [1, "NAMA MURID", "", "", "", "", "", "", "", ""],
+]), "1 CONTOH");
+XLSX.writeFile(uasa, resolve(outputDir, "templat-uasa-v1.xlsx"));
 
 const pbd = XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(pbd, configSheet("pbd"), "_CONFIG");
