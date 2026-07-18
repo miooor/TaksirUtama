@@ -155,7 +155,7 @@ BEGIN
       ELSE
         action_name := CASE WHEN payload.class_subject_id = p_finalize_class_subject_id THEN 'finalize' WHEN payload.class_subject_id = p_reopen_class_subject_id THEN 'reopen' ELSE 'save_draft' END;
         UPDATE pbd_class_subject_entries
-        SET enrolled_count = next_enrolled_count, tp1_count = payload.tp1, tp2_count = payload.tp2, tp3_count = payload.tp3, tp4_count = payload.tp4, tp5_count = payload.tp5, tp6_count = payload.tp6, not_assessed_count = payload.not_assessed, status = next_status, revision = revision + 1, updated_by = p_actor_id, updated_at = now()
+        SET enrolled_count = next_enrolled_count, tp1_count = payload.tp1, tp2_count = payload.tp2, tp3_count = payload.tp3, tp4_count = payload.tp4, tp5_count = payload.tp5, tp6_count = payload.tp6, not_assessed_count = payload.not_assessed, status = next_status, revision = pbd_class_subject_entries.revision + 1, updated_by = p_actor_id, updated_at = now()
         WHERE id = current_entry.id;
         INSERT INTO pbd_entry_revisions (id, school_id, entry_id, actor_id, action, previous_json, next_json)
         VALUES (gen_random_uuid()::text, p_school_id, current_entry.id, p_actor_id, action_name,
