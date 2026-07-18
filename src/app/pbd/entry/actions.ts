@@ -9,6 +9,7 @@ import {
   deleteDatabasePbdSetup,
   saveDatabasePbdEntry,
   saveDatabasePbdClassEntries,
+  saveDatabasePbdSubjectEntries,
   setDatabasePbdSetupArchived,
   updateDatabasePbdClassEnrollment,
 } from "@/lib/db/pbd";
@@ -99,6 +100,28 @@ export async function savePbdClassEntriesAction(_: PbdActionState, formData: For
     refresh();
     const intent = formData.get("intent");
     return { success: intent === "finalize" ? "Draf kelas disimpan dan subjek dimuktamadkan." : intent === "reopen" ? "Draf kelas disimpan dan subjek dibuka semula." : "Semua draf kelas disimpan.", changedCount: result.filter((row) => row.changed).length, savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }) };
+  } catch (error) {
+    return { error: message(error) };
+  }
+}
+
+export async function savePbdSubjectEntriesAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  try {
+    const context = await requireRole("school_admin", "platform_admin");
+    const result = await saveDatabasePbdSubjectEntries(context, {
+      subjectId: formData.get("subjectId"), year: formData.get("year"), semester: formData.get("semester"),
+      finalizeClassSubjectId: formData.get("intent") === "finalize" ? formData.get("targetClassSubjectId") : null,
+      reopenClassSubjectId: formData.get("intent") === "reopen" ? formData.get("targetClassSubjectId") : null,
+      entries: readRows(formData),
+    });
+    refresh();
+    const intent = formData.get("intent");
+    const changedCount = result.filter((row) => row.changed).length;
+    return {
+      success: intent === "finalize" ? "Semua draf subjek disimpan dan kelas dimuktamadkan." : intent === "reopen" ? "Semua draf subjek disimpan dan kelas dibuka semula." : "Semua draf subjek disimpan.",
+      changedCount,
+      savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }),
+    };
   } catch (error) {
     return { error: message(error) };
   }

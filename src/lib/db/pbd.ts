@@ -7,11 +7,12 @@ import type { PbdSubjectClassRecord, TpBand } from "@/types/pbd";
 const bands: TpBand[] = ["TP1", "TP2", "TP3", "TP4", "TP5", "TP6"];
 
 export type DatabasePbdSetup = {
+  schoolId: string;
   yearId: string | null;
   periodId: string | null;
   classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null; active: boolean; canDelete: boolean }>;
   subjects: Array<{ id: string; code: string; name: string; active: boolean; canDelete: boolean }>;
-  rows: Array<{ classSubjectId: string; classId: string; subjectId: string; className: string; subjectCode: string; subjectName: string; enrolledCount: number; active: boolean; entry: DatabasePbdEntry | null }>;
+  rows: Array<{ classSubjectId: string; classId: string; subjectId: string; className: string; classLevelKind: "tahun" | "tingkatan" | "peralihan"; classLevelNumber: number | null; subjectCode: string; subjectName: string; enrolledCount: number; active: boolean; entry: DatabasePbdEntry | null }>;
 };
 
 export type DatabasePbdEntry = {
@@ -73,6 +74,15 @@ const bulkEntryInput = z.object({
 
 const bulkClassEntryInput = z.object({
   classId: z.string().uuid(),
+  year: z.string().regex(/^\d{4}$/),
+  semester: z.enum(["1", "2"]),
+  finalizeClassSubjectId: z.string().uuid().nullable().optional(),
+  reopenClassSubjectId: z.string().uuid().nullable().optional(),
+  entries: z.array(bulkEntryInput).min(1),
+});
+
+const bulkSubjectEntryInput = z.object({
+  subjectId: z.string().uuid(),
   year: z.string().regex(/^\d{4}$/),
   semester: z.enum(["1", "2"]),
   finalizeClassSubjectId: z.string().uuid().nullable().optional(),
@@ -186,7 +196,7 @@ async function ensureYearAndPeriod(context: ActorContext, year: string, semester
 }
 
 export async function getDatabasePbdSetup(context: ActorContext, year: string, semester: "1" | "2" = "1"): Promise<DatabasePbdSetup> {
-  if (!isDatabaseConfigured()) return { yearId: null, periodId: null, classes: [], subjects: [], rows: [] };
+  if (!isDatabaseConfigured()) return { schoolId: context.school.id, yearId: null, periodId: null, classes: [], subjects: [], rows: [] };
   await ensureDatabaseSchool(context);
   await ensureAcademicYearConstraint();
   const sql = getDatabase();
@@ -216,8 +226,9 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
   const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
   const subjects = subjectsRaw.map((item) => ({ id: String(item.id), code: String(item.code), name: String(item.name), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
   const rowsRaw = periodId ? await sql`
-    SELECT cs.id AS class_subject_id, c.id AS class_id, s.id AS subject_id, c.name AS class_name, s.code AS subject_code, s.name AS subject_name, cs.active,
-      c.enrolled_count, e.id AS entry_id, e.revision, e.status, e.tp1_count, e.tp2_count, e.tp3_count,
+    SELECT cs.id AS class_subject_id, c.id AS class_id, s.id AS subject_id, c.name AS class_name, c.level_kind, c.level_number, s.code AS subject_code, s.name AS subject_name, cs.active,
+      c.enrolled_count AS class_enrolled_count, e.enrolled_count AS entry_enrolled_count,
+      e.id AS entry_id, e.revision, e.status, e.tp1_count, e.tp2_count, e.tp3_count,
       e.tp4_count, e.tp5_count, e.tp6_count, e.not_assessed_count
     FROM class_subjects cs
     JOIN school_classes c ON c.id = cs.class_id AND c.school_id = ${schoolId}
@@ -227,8 +238,8 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
     ORDER BY cs.active DESC, c.name, s.name
   ` : [];
   return {
-    yearId, periodId, classes, subjects,
-    rows: rowsRaw.map((item) => ({ classSubjectId: String(item.class_subject_id), classId: String(item.class_id), subjectId: String(item.subject_id), className: String(item.class_name), subjectCode: String(item.subject_code), subjectName: String(item.subject_name), enrolledCount: Number(item.enrolled_count), active: Boolean(item.active), entry: item.entry_id ? entryFromRow(record(item)) : null })),
+    schoolId, yearId, periodId, classes, subjects,
+    rows: rowsRaw.map((item) => ({ classSubjectId: String(item.class_subject_id), classId: String(item.class_id), subjectId: String(item.subject_id), className: String(item.class_name), classLevelKind: item.level_kind as DatabasePbdSetup["rows"][number]["classLevelKind"], classLevelNumber: item.level_number === null ? null : Number(item.level_number), subjectCode: String(item.subject_code), subjectName: String(item.subject_name), enrolledCount: Number(item.class_enrolled_count), active: Boolean(item.active), entry: item.entry_id ? entryFromRow({ ...record(item), enrolled_count: item.entry_enrolled_count }) : null })),
   };
 }
 
@@ -305,6 +316,29 @@ export async function saveDatabasePbdClassEntries(context: ActorContext, raw: un
   const rows = await sql`
     SELECT * FROM pbd_save_class_entries(
       ${context.school.id}, ${periodId}, ${input.classId}, ${context.actor.id},
+      ${JSON.stringify(input.entries.map((entry) => ({
+        class_subject_id: entry.classSubjectId, expected_revision: entry.expectedRevision,
+        tp1: entry.tp1, tp2: entry.tp2, tp3: entry.tp3, tp4: entry.tp4, tp5: entry.tp5, tp6: entry.tp6,
+        not_assessed: entry.notAssessed,
+      })))}::jsonb,
+      ${input.finalizeClassSubjectId ?? null}, ${input.reopenClassSubjectId ?? null}
+    )
+  `;
+  return rows.map((row) => ({
+    classSubjectId: String(row.class_subject_id), entryId: row.entry_id ? String(row.entry_id) : null,
+    revision: Number(row.revision), status: row.status === "final" ? "final" as const : "draft" as const,
+    enrolledCount: Number(row.enrolled_count), changed: Boolean(row.changed),
+  }));
+}
+
+export async function saveDatabasePbdSubjectEntries(context: ActorContext, raw: unknown) {
+  const input = bulkSubjectEntryInput.parse(raw);
+  if (input.finalizeClassSubjectId && input.reopenClassSubjectId) throw new Error("Pilih sama ada muktamad atau buka semula satu kelas sahaja.");
+  const sql = requireDatabase();
+  const { periodId } = await ensureYearAndPeriod(context, input.year, input.semester);
+  const rows = await sql`
+    SELECT * FROM pbd_save_subject_entries(
+      ${context.school.id}, ${periodId}, ${input.subjectId}, ${context.actor.id},
       ${JSON.stringify(input.entries.map((entry) => ({
         class_subject_id: entry.classSubjectId, expected_revision: entry.expectedRevision,
         tp1: entry.tp1, tp2: entry.tp2, tp3: entry.tp3, tp4: entry.tp4, tp5: entry.tp5, tp6: entry.tp6,
