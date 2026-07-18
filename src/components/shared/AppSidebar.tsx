@@ -13,10 +13,11 @@ function NavLinks({ year, onNavigate }: { year: string; onNavigate?: () => void 
   const pathname = usePathname();
   const query = useSearchParams();
   const selectedYear = query.get("year") ?? year;
+  const selectedSemester = query.get("semester") === "2" ? "2" : "1";
   const groups = [
-    [{ label: "Dashboard", href: `/dashboard?year=${selectedYear}`, active: pathname === "/dashboard" }],
+    [{ label: "Dashboard", href: `/dashboard?year=${selectedYear}&semester=${selectedSemester}`, active: pathname === "/dashboard" }],
     [{ label: "UPSA", href: `/assessments/${selectedYear}/upsa/classes`, active: pathname.includes("/upsa") || pathname.startsWith("/upsa") }, { label: "UASA", href: `/assessments/${selectedYear}/uasa/classes`, active: pathname.includes("/uasa") || pathname.startsWith("/uasa") }],
-    [{ label: "Isi Rumusan TP", href: `/pbd/entry?year=${selectedYear}`, active: pathname === "/pbd/entry" }, { label: "Setup PBD", href: `/pbd/setup?year=${selectedYear}`, active: pathname === "/pbd/setup" }, { label: "Analisis PBD", href: `/pbd/periods/${selectedYear}`, active: pathname.startsWith("/pbd/periods") }],
+    [{ label: "Isi Rumusan TP", href: `/pbd/entry?year=${selectedYear}&semester=${selectedSemester}`, active: pathname === "/pbd/entry" }, { label: "Setup PBD", href: `/pbd/setup?year=${selectedYear}&semester=${selectedSemester}`, active: pathname === "/pbd/setup" }, { label: "Analisis PBD", href: `/pbd/periods/${selectedYear}`, active: pathname.startsWith("/pbd/periods") }],
     [{ label: "Dialog Prestasi", href: `/dialog-prestasi?year=${selectedYear}`, active: pathname.startsWith("/dialog-prestasi") }, { label: "Intervensi", href: "/intervensi", active: pathname.startsWith("/intervensi") }, { label: "Dapatan", href: "/insights", active: pathname.startsWith("/insights") }],
   ];
   return <nav aria-label="Navigasi utama" className="space-y-4">{groups.map((group, index) => <div key={index} className="space-y-1">{group.map((item) => <Link key={item.href} href={item.href} onClick={onNavigate} className={`block rounded-md px-3 py-2 text-sm ${item.active ? "font-semibold text-teal-900" : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"}`}>{item.label}</Link>)}</div>)}</nav>;

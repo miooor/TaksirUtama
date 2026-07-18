@@ -18,7 +18,7 @@ export default async function PbdPeriodHomePage({ params }: { params: Promise<{ 
 
   return (
     <AppShell>
-      <PageHeader eyebrow={`PBD ${period.year}`} title={text(language, { ms: "Pilih analisis", en: "Choose analysis" })} description={period.reportName} icon={BookOpenCheck} actions={<Link href={`/pbd/entry?year=${period.year}`} className="rounded-md border px-3 py-2 text-sm font-medium">{text(language, { ms: "Isi PBD", en: "Enter PBD" })}</Link>} />
+      <PageHeader eyebrow={`PBD ${period.year}`} title={text(language, { ms: "Pilih analisis", en: "Choose analysis" })} description={period.reportName} icon={BookOpenCheck} actions={<Link href={`/pbd/entry?year=${period.year}&semester=${period.semester ?? "1"}`} className="rounded-md border px-3 py-2 text-sm font-medium">{text(language, { ms: "Isi PBD", en: "Enter PBD" })}</Link>} />
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <Link href={`${base}/subjects`} className="group rounded-lg border bg-white p-5 hover:bg-stone-50">
           <h2 className="font-semibold">{text(language, { ms: "Subjek / Panitia", en: "Subjects / Panels" })}</h2>

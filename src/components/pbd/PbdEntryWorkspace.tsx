@@ -11,6 +11,7 @@ import {
   revisionsMatch,
   subjectEntryBalance,
   subjectEntryFields,
+  subjectEntryMatchesFilter,
   subjectEntryPercentage,
   subjectEntryRecoveryKey,
   subjectEntryState,
@@ -26,8 +27,8 @@ type ValuesByRow = Record<string, SubjectEntryValues>;
 type RecoveryDraft = { revisions: Record<string, number>; values: ValuesByRow };
 
 const filterLabels: Array<{ id: SubjectEntryFilter; label: string }> = [
-  { id: "all", label: "Semua" }, { id: "empty", label: "Belum diisi" },
-  { id: "mismatch", label: "Tidak sepadan" }, { id: "ready", label: "Sedia dimuktamadkan" },
+  { id: "unfinished", label: "Belum selesai" },
+  { id: "all", label: "Semua" },
   { id: "final", label: "Muktamad" },
 ];
 
@@ -59,7 +60,7 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
   const router = useRouter();
   const targetRef = useRef<HTMLInputElement>(null);
   const [dirty, setDirty] = useState(false);
-  const [filter, setFilter] = useState<SubjectEntryFilter>("all");
+  const [filter, setFilter] = useState<SubjectEntryFilter>("unfinished");
   const [recoveryDraft, setRecoveryDraft] = useState<RecoveryDraft | null>(null);
   const [recoveryNotice, setRecoveryNotice] = useState("");
   const activeClassIds = useMemo(() => new Set(setup.classes.filter((item) => item.active).map((item) => item.id)), [setup.classes]);
@@ -134,11 +135,23 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
 
   function rowRequired(row: SetupRow) { return row.entry?.status === "final" ? row.entry.enrolledCount : row.enrolledCount; }
   function rowState(row: SetupRow) { return subjectEntryState(values[row.classSubjectId] ?? valuesFromRow(row), rowRequired(row), row.entry?.status === "final"); }
-  const counts = Object.fromEntries(filterLabels.map(({ id }) => [id, id === "all" ? rows.length : rows.filter((row) => rowState(row) === id).length])) as Record<SubjectEntryFilter, number>;
-  const visibleRows = rows.filter((row) => filter === "all" || rowState(row) === filter);
-  const incompleteRows = rows.filter((row) => ["empty", "mismatch"].includes(rowState(row)));
+  const counts: Record<SubjectEntryFilter, number> = {
+    all: rows.length,
+    unfinished: rows.filter((row) => rowState(row) !== "final").length,
+    empty: rows.filter((row) => rowState(row) === "empty").length,
+    mismatch: rows.filter((row) => rowState(row) === "mismatch").length,
+    ready: rows.filter((row) => rowState(row) === "ready").length,
+    final: rows.filter((row) => rowState(row) === "final").length,
+  };
+  const visibleRows = rows.filter((row) => subjectEntryMatchesFilter(rowState(row), filter));
   const totalPupils = rows.reduce((sum, row) => sum + rowRequired(row), 0);
   const groups = Array.from(new Set(rows.map(levelLabel))).map((label) => ({ label, rows: rows.filter((row) => levelLabel(row) === label) }));
+
+  function subjectProgress(subjectId: string) {
+    const subjectRows = activeRows.filter((row) => row.subjectId === subjectId);
+    const finalized = subjectRows.filter((row) => row.entry?.status === "final").length;
+    return `${finalized}/${subjectRows.length} muktamad`;
+  }
 
   function handleEnter(event: React.KeyboardEvent<HTMLInputElement>, rowId: string, field: SubjectEntryField) {
     if (event.key !== "Enter") return;
@@ -158,61 +171,48 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
     setDirty(true);
   }
 
-  function focusNextIncomplete() {
-    const row = incompleteRows[0];
-    if (!row) return;
-    setFilter("all");
-    setTimeout(() => {
-      const firstBlank = subjectEntryFields.find((field) => values[row.classSubjectId][field] === "") ?? "tp1";
-      const input = document.getElementById(`pbd-${firstBlank}-${row.classSubjectId}`);
-      input?.scrollIntoView({ behavior: "smooth", block: "center" });
-      input?.focus();
-    }, 0);
-  }
-
   if (!selectedSubject) {
     return <section className="mt-6 rounded-lg border border-stone-200 bg-white p-6"><h2 className="text-lg font-semibold">Belum ada subjek yang ditetapkan</h2><p className="mt-2 text-sm text-slate-600">Tetapkan subjek kepada sekurang-kurangnya satu kelas dalam PBD Setup.</p><Link className="mt-4 inline-block rounded-md bg-teal-800 px-4 py-2 text-sm font-medium text-white" href={`/pbd/setup?year=${year}&semester=${semester}`}>Buka PBD Setup</Link></section>;
   }
 
   return <div className="mt-6 min-w-0 space-y-5">
-    <section className="rounded-lg border border-stone-200 bg-white p-4 sm:p-5">
-      <label className="block max-w-lg text-sm font-medium text-slate-700">Pilih subjek<select value={selectedSubject.id} onChange={(event) => switchSubject(event.target.value)} className="mt-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-base">{eligibleSubjects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
-      <div className="mt-5 flex min-w-0 flex-wrap items-end justify-between gap-3"><div className="min-w-0"><h2 className="break-words text-xl font-semibold text-slate-900">{selectedSubject.code} · {selectedSubject.name}</h2><p className="mt-1 text-sm text-slate-600">Semester {semester} · {year} · {rows.length} kelas · {totalPupils} murid</p></div><Link href={`/pbd/setup?year=${year}&semester=${semester}`} className="text-sm font-medium text-teal-800 hover:text-teal-950">Urus kelas dan subjek</Link></div>
+    <section className="rounded-lg bg-white p-4 sm:p-5">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(15rem,1fr)_auto] lg:items-end">
+        <label className="block min-w-0 text-sm font-medium text-slate-700">Subjek<select value={selectedSubject.id} onChange={(event) => switchSubject(event.target.value)} className="mt-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-base">{eligibleSubjects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name} · {subjectProgress(item.id)}</option>)}</select></label>
+        <div className="min-w-0 lg:text-right"><p className="text-sm font-medium text-slate-900">{counts.final}/{rows.length} kelas muktamad</p><p className="mt-1 text-sm text-slate-600">Semester {semester} · {year} · {totalPupils} murid</p></div>
+      </div>
+      <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-3"><dl className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-sm"><div><dt className="inline text-slate-600">Belum diisi </dt><dd className="inline font-semibold text-slate-950">{counts.empty}</dd></div><div><dt className="inline text-slate-600">Tidak sepadan </dt><dd className="inline font-semibold text-amber-800">{counts.mismatch}</dd></div><div><dt className="inline text-slate-600">Sedia </dt><dd className="inline font-semibold text-teal-800">{counts.ready}</dd></div></dl><Link href={`/pbd/setup?year=${year}&semester=${semester}&view=assignments`} className="text-sm font-medium text-teal-800 hover:text-teal-950">Urus penetapan</Link></div>
     </section>
 
     {recoveryDraft ? <section className="rounded-lg border border-amber-300 bg-amber-50 p-4"><h2 className="font-semibold text-amber-950">Perubahan belum disimpan ditemui</h2><p className="mt-1 text-sm text-amber-900">Pulihkan nilai yang disimpan sementara dalam tab ini?</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => { setValues(recoveryDraft.values); setDirty(true); setRecoveryDraft(null); }} className="rounded-md bg-amber-900 px-3 py-2 text-sm font-medium text-white">Pulihkan perubahan</button><button type="button" onClick={() => { if (recoveryKey) sessionStorage.removeItem(recoveryKey); setRecoveryDraft(null); }} className="rounded-md border border-amber-400 px-3 py-2 text-sm font-medium text-amber-950">Buang draf tempatan</button></div></section> : null}
     {recoveryNotice ? <p className="text-sm text-slate-600" role="status">{recoveryNotice}</p> : null}
 
-    <section className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6" aria-label="Ringkasan kemajuan subjek">
-      {[{ label: "Kelas", value: rows.length }, { label: "Murid", value: totalPupils }, { label: "Belum diisi", value: counts.empty }, { label: "Tidak sepadan", value: counts.mismatch }, { label: "Sedia", value: counts.ready }, { label: "Muktamad", value: counts.final }].map((item) => <div key={item.label} className="rounded-md bg-stone-100 px-4 py-3"><p className="text-sm text-slate-600">{item.label}</p><p className="mt-1 text-2xl font-semibold text-slate-950">{item.value}</p></div>)}
-    </section>
-
-    <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-stone-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-wrap gap-1" aria-label="Tapis kelas">{filterLabels.map((item) => <button key={item.id} type="button" onClick={() => setFilter(item.id)} className={`rounded-md px-3 py-2 text-sm ${filter === item.id ? "bg-stone-200 font-semibold text-slate-950" : "text-slate-600 hover:bg-stone-100"}`}>{item.label} ({counts[item.id]})</button>)}</div>
-      <button type="button" disabled={!incompleteRows.length} onClick={focusNextIncomplete} className="shrink-0 rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-slate-800 disabled:opacity-50">Kelas belum lengkap seterusnya</button>
+    <div className="flex min-w-0 flex-wrap gap-1 rounded-lg bg-white p-2" aria-label="Tapis kelas">
+      {filterLabels.map((item) => <button key={item.id} type="button" onClick={() => setFilter(item.id)} className={`rounded-md px-3 py-2 text-sm ${filter === item.id ? "bg-stone-800 font-semibold text-white" : "text-slate-600 hover:bg-stone-100"}`} style={filter === item.id ? { color: "#ffffff" } : undefined}>{item.label} ({counts[item.id]})</button>)}
     </div>
 
     <form action={action} className="min-w-0 pb-24">
       <input type="hidden" name="subjectId" value={selectedSubject.id} /><input type="hidden" name="year" value={year} /><input type="hidden" name="semester" value={semester} /><input ref={targetRef} type="hidden" name="targetClassSubjectId" value="" />
-      <section className="rounded-lg border border-stone-200 bg-white"><div className="p-4 sm:p-5"><h2 className="text-lg font-semibold">Isi rumusan TP</h2><p className="mt-1 text-sm text-slate-600">Masukkan bilangan murid bagi setiap TP. Peratus dan baki dikira secara langsung.</p></div>
+      <section className="rounded-lg bg-white"><div className="p-4 sm:p-5"><h2 className="text-lg font-semibold">Isi rumusan TP</h2><p className="mt-1 text-sm text-slate-600">Masukkan bilangan murid bagi setiap TP. Peratus dan baki dikira secara langsung.</p></div>
         {groups.map((group) => {
           const groupVisible = group.rows.some((row) => visibleRows.includes(row));
-          return <section key={group.label} hidden={!groupVisible} className="border-t border-stone-200"><h3 className="bg-stone-50 px-4 py-3 font-semibold text-slate-900 sm:px-5">{group.label}</h3>{group.rows.map((row) => {
+          return <section key={group.label} hidden={!groupVisible} className="border-t border-stone-200"><h3 className="bg-stone-100 px-4 py-3 font-semibold text-slate-900 sm:px-5">{group.label}</h3><div className="hidden grid-cols-[minmax(8rem,1.3fr)_repeat(6,minmax(3.6rem,0.65fr))_minmax(4.8rem,0.8fr)_minmax(7rem,1fr)_minmax(10rem,auto)] gap-2 px-5 py-2 text-xs font-medium text-slate-600 xl:grid"><span>Kelas</span>{["TP1", "TP2", "TP3", "TP4", "TP5", "TP6", "Belum ditaksir", "Jumlah", "Tindakan"].map((label) => <span key={label}>{label}</span>)}</div>{group.rows.map((row) => {
             const rowValues = values[row.classSubjectId] ?? valuesFromRow(row);
             const finalized = row.entry?.status === "final";
             const required = rowRequired(row);
             const total = subjectEntryTotal(rowValues);
             const balance = subjectEntryBalance(rowValues, required);
             const status = rowState(row);
-            const visible = filter === "all" || status === filter;
-            return <article key={row.classSubjectId} hidden={!visible} className="min-w-0 border-t border-stone-200 p-4 sm:p-5">
+            const visible = subjectEntryMatchesFilter(status, filter);
+            return <article key={row.classSubjectId} hidden={!visible} className="min-w-0 border-t border-stone-200 p-4 sm:p-5 xl:grid xl:grid-cols-[minmax(8rem,1.3fr)_repeat(6,minmax(3.6rem,0.65fr))_minmax(4.8rem,0.8fr)_minmax(7rem,1fr)_minmax(10rem,auto)] xl:items-start xl:gap-2 xl:px-5 xl:py-3">
               <input type="hidden" name="classSubjectId" value={row.classSubjectId} /><input type="hidden" name={`revision:${row.classSubjectId}`} value={row.entry?.revision ?? 0} />
-              <div className="flex min-w-0 flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h4 className="font-semibold text-slate-950">{row.className}</h4><p className="text-sm text-slate-600">{required} murid{finalized ? " · Snapshot muktamad" : ""}</p></div><p className={`text-sm font-medium ${status === "ready" ? "text-teal-800" : status === "final" ? "text-slate-700" : "text-amber-800"}`}>{status === "final" ? "Muktamad" : status === "ready" ? "Sedia dimuktamadkan" : status === "empty" ? "Belum diisi" : "Draf perlu disemak"}</p></div>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">{subjectEntryFields.map((field, index) => {
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-3 xl:block"><div className="min-w-0"><h4 className="font-semibold text-slate-950">{row.className}</h4><p className="text-sm text-slate-600">{required} murid{finalized ? " · Snapshot" : ""}</p></div><p className={`text-sm font-medium xl:hidden ${status === "ready" ? "text-teal-800" : status === "final" ? "text-slate-700" : "text-amber-800"}`}>{status === "final" ? "Muktamad" : status === "ready" ? "Sedia dimuktamadkan" : status === "empty" ? "Belum diisi" : "Draf perlu disemak"}</p></div>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:contents">{subjectEntryFields.map((field, index) => {
                 const percentage = subjectEntryPercentage(rowValues[field], required);
-                return <label key={field} className="text-xs font-medium text-slate-600">{field === "notAssessed" ? "Belum ditaksir" : `TP${index + 1}`}<input id={`pbd-${field}-${row.classSubjectId}`} name={`${field}:${row.classSubjectId}`} value={rowValues[field]} onChange={(event) => updateField(row.classSubjectId, field, event.target.value)} onKeyDown={(event) => handleEnter(event, row.classSubjectId, field)} readOnly={finalized} aria-readonly={finalized} type="number" min="0" className="mt-1 block w-full rounded-md border border-stone-300 bg-white px-2.5 py-2 text-base text-slate-900 read-only:cursor-not-allowed read-only:bg-stone-100 read-only:text-slate-600" /><span className="mt-1 block text-xs font-normal text-slate-500">{percentage === null ? "—" : `${percentage.toFixed(1)}%`}</span></label>;
+                const label = field === "notAssessed" ? "Belum ditaksir" : `TP${index + 1}`;
+                return <label key={field} className="min-w-0 text-xs font-medium text-slate-600"><span className="xl:sr-only">{label}</span><input aria-label={`${label} untuk ${row.className}`} id={`pbd-${field}-${row.classSubjectId}`} name={`${field}:${row.classSubjectId}`} value={rowValues[field]} onChange={(event) => updateField(row.classSubjectId, field, event.target.value)} onKeyDown={(event) => handleEnter(event, row.classSubjectId, field)} readOnly={finalized} aria-readonly={finalized} type="number" min="0" className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 bg-white px-2 py-2 text-base text-slate-900 read-only:cursor-not-allowed read-only:bg-stone-100 read-only:text-slate-600 xl:mt-0" /><span className="mt-1 block text-xs font-normal text-slate-500">{percentage === null ? "—" : `${percentage.toFixed(1)}%`}</span></label>;
               })}</div>
-              <div className="mt-4 flex min-w-0 flex-col gap-3 border-t border-stone-100 pt-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-sm text-slate-600">Jumlah diisi: <span className="font-medium text-slate-950">{total}</span> · Diperlukan: <span className="font-medium text-slate-950">{required}</span></p><p className={`mt-1 text-sm font-medium ${balance.kind === "complete" ? "text-teal-800" : "text-amber-800"}`}>{balance.label}</p></div><div className="flex flex-col gap-2 sm:flex-row">{!finalized ? <button type="button" onClick={() => fillBlanks(row.classSubjectId)} className="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-slate-800">Isi ruang kosong dengan 0</button> : null}<button type="submit" name="intent" value={finalized ? "reopen" : "finalize"} onClick={() => { if (targetRef.current) targetRef.current.value = row.classSubjectId; }} disabled={pending} className="rounded-md border border-teal-800 px-4 py-2 text-sm font-medium text-teal-900 disabled:opacity-60">{finalized ? "Simpan & buka semula" : "Simpan & muktamad"}</button></div></div>
+              <div className="mt-4 flex min-w-0 flex-col gap-3 border-t border-stone-100 pt-3 sm:flex-row sm:items-center sm:justify-between xl:contents"><div className="min-w-0"><p className="text-sm text-slate-600"><span className="font-medium text-slate-950">{total}/{required}</span></p><p className={`mt-1 text-sm font-medium ${balance.kind === "complete" ? "text-teal-800" : "text-amber-800"}`}>{balance.label}</p></div><div className="flex flex-col gap-2 sm:flex-row xl:flex-col">{!finalized ? <button type="button" onClick={() => fillBlanks(row.classSubjectId)} className="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-slate-800">Isi kosong dengan 0</button> : null}<button type="submit" name="intent" value={finalized ? "reopen" : "finalize"} onClick={() => { if (targetRef.current) targetRef.current.value = row.classSubjectId; }} disabled={pending} className="rounded-md border border-teal-800 px-3 py-2 text-sm font-medium text-teal-900 disabled:opacity-60">{finalized ? "Buka semula" : "Simpan & muktamad"}</button></div></div>
             </article>;
           })}</section>;
         })}

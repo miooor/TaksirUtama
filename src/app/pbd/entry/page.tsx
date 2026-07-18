@@ -27,8 +27,8 @@ export default async function PbdEntryPage({ searchParams }: { searchParams: Pro
   );
   return (
     <AppShell>
-      <PageHeader eyebrow="PBD tanpa workbook" title="Isi Rumusan TP Mengikut Subjek" description="Pilih satu subjek, kemudian lengkapkan rumusan TP bagi semua kelas yang ditetapkan." icon={PenLine} actions={<Link className="rounded-md border px-3 py-2" href={`/pbd/periods/${year}`}>Lihat analisis</Link>} />
-      {!databaseConfigured ? <section className="mt-6 rounded-lg border bg-white p-6"><Database className="h-5 w-5 text-teal-800" /><h2 className="mt-3 font-semibold">Pangkalan data belum disambungkan</h2><p className="mt-2 max-w-2xl text-sm text-slate-600">Tetapkan DATABASE_URL, jalankan migrasi pangkalan data, kemudian buka semula halaman ini. Google Sheets kekal sebagai sumber MVP sehingga itu selesai.</p></section> : <PbdEntryWorkspace key={selectedSubjectId ?? "none"} setup={setup!} year={year} semester={semester} selectedSubjectId={selectedSubjectId} />}
+      <PageHeader eyebrow={`PBD · Semester ${semester}`} title="Isi Rumusan TP Mengikut Subjek" description="Satu subjek, semua kelas yang ditetapkan." icon={PenLine} actions={<Link className="rounded-md border px-3 py-2" href={`/pbd/periods/${year}`}>Lihat analisis</Link>} />
+      {!databaseConfigured ? <section className="mt-6 rounded-lg bg-white p-6"><Database className="h-5 w-5 text-teal-800" /><h2 className="mt-3 font-semibold">Pangkalan data belum disambungkan</h2><p className="mt-2 max-w-2xl text-sm text-slate-600">Tetapkan DATABASE_URL, jalankan migrasi pangkalan data, kemudian buka semula halaman ini.</p></section> : <PbdEntryWorkspace key={selectedSubjectId ?? "none"} setup={setup!} year={year} semester={semester} selectedSubjectId={selectedSubjectId} />}
     </AppShell>
   );
 }

@@ -5,6 +5,7 @@ import {
   revisionsMatch,
   selectSubjectForEntry,
   subjectEntryBalance,
+  subjectEntryMatchesFilter,
   subjectEntryPercentage,
   subjectEntryRecoveryKey,
   subjectEntryState,
@@ -29,6 +30,10 @@ describe("subject PBD entry workflow", () => {
     expect(filled.tp2).toBe("0");
     expect(subjectEntryState({ ...filled, tp2: "16" }, 20, false)).toBe("ready");
     expect(subjectEntryState(filled, 20, true)).toBe("final");
+    expect(subjectEntryMatchesFilter("empty", "unfinished")).toBe(true);
+    expect(subjectEntryMatchesFilter("ready", "unfinished")).toBe(true);
+    expect(subjectEntryMatchesFilter("final", "unfinished")).toBe(false);
+    expect(subjectEntryMatchesFilter("final", "all")).toBe(true);
   });
 
   it("scopes recovery and rejects stale revision sets", () => {

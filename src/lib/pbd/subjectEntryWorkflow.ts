@@ -1,7 +1,7 @@
 export const subjectEntryFields = ["tp1", "tp2", "tp3", "tp4", "tp5", "tp6", "notAssessed"] as const;
 export type SubjectEntryField = (typeof subjectEntryFields)[number];
 export type SubjectEntryValues = Record<SubjectEntryField, string>;
-export type SubjectEntryFilter = "all" | "empty" | "mismatch" | "ready" | "final";
+export type SubjectEntryFilter = "unfinished" | "all" | "empty" | "mismatch" | "ready" | "final";
 
 export function emptySubjectEntryValues(): SubjectEntryValues {
   return { tp1: "", tp2: "", tp3: "", tp4: "", tp5: "", tp6: "", notAssessed: "" };
@@ -27,10 +27,16 @@ export function subjectEntryBalance(values: SubjectEntryValues, enrolledCount: n
   return { kind: "complete" as const, label: "Lengkap" };
 }
 
-export function subjectEntryState(values: SubjectEntryValues, enrolledCount: number, finalized: boolean): Exclude<SubjectEntryFilter, "all"> {
+export function subjectEntryState(values: SubjectEntryValues, enrolledCount: number, finalized: boolean): Exclude<SubjectEntryFilter, "all" | "unfinished"> {
   if (finalized) return "final";
   if (subjectEntryFields.every((field) => values[field] === "")) return "empty";
   return subjectEntryComplete(values) && subjectEntryTotal(values) === enrolledCount ? "ready" : "mismatch";
+}
+
+export function subjectEntryMatchesFilter(state: Exclude<SubjectEntryFilter, "all" | "unfinished">, filter: SubjectEntryFilter) {
+  if (filter === "all") return true;
+  if (filter === "unfinished") return state !== "final";
+  return state === filter;
 }
 
 export function fillSubjectEntryBlanks(values: SubjectEntryValues) {
