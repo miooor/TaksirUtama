@@ -192,7 +192,7 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
       <button type="button" disabled={!incompleteRows.length} onClick={focusNextIncomplete} className="shrink-0 rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-slate-800 disabled:opacity-50">Kelas belum lengkap seterusnya</button>
     </div>
 
-    <form action={action} className="min-w-0">
+    <form action={action} className="min-w-0 pb-24">
       <input type="hidden" name="subjectId" value={selectedSubject.id} /><input type="hidden" name="year" value={year} /><input type="hidden" name="semester" value={semester} /><input ref={targetRef} type="hidden" name="targetClassSubjectId" value="" />
       <section className="rounded-lg border border-stone-200 bg-white"><div className="p-4 sm:p-5"><h2 className="text-lg font-semibold">Isi rumusan TP</h2><p className="mt-1 text-sm text-slate-600">Masukkan bilangan murid bagi setiap TP. Peratus dan baki dikira secara langsung.</p></div>
         {groups.map((group) => {
@@ -217,7 +217,7 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
           })}</section>;
         })}
       </section>
-      <div className="sticky bottom-0 z-10 mt-5 border border-stone-300 bg-white/95 p-3 backdrop-blur-sm sm:flex sm:items-center sm:justify-between"><div className="min-w-0 text-sm text-slate-600">{state.error ? <span className="font-medium text-rose-700" role="alert">{state.error}</span> : state.success ? <span className="font-medium text-teal-800" role="status">{state.changedCount ?? 0} kelas berubah dan disimpan pada {state.savedAt}.</span> : dirty ? "Perubahan belum disimpan." : "Semua perubahan telah disimpan."}</div><button type="submit" name="intent" value="save" disabled={pending} className="mt-3 w-full rounded-md bg-teal-800 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 sm:mt-0 sm:w-auto">{pending ? "Menyimpan…" : "Simpan semua draf"}</button></div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-300 bg-white lg:left-[208px] xl:left-[240px]"><div className="mx-auto min-w-0 max-w-7xl p-3 sm:flex sm:items-center sm:justify-between sm:px-6"><div className="min-w-0 text-sm text-slate-600">{state.error ? <span className="font-medium text-rose-700" role="alert">{state.error}</span> : state.success ? <span className="font-medium text-teal-800" role="status">{state.changedCount ?? 0} kelas berubah dan disimpan pada {state.savedAt}.</span> : dirty ? "Perubahan belum disimpan." : "Semua perubahan telah disimpan."}</div><button type="submit" name="intent" value="save" disabled={pending} className="mt-3 w-full rounded-md bg-teal-800 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 sm:mt-0 sm:w-auto">{pending ? "Menyimpan…" : "Simpan semua draf"}</button></div></div>
     </form>
   </div>;
 }
