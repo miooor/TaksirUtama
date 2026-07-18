@@ -27,7 +27,7 @@ export function DashboardSettingsMenu({ language }: { language: Language }) {
         <Settings2 className="h-4 w-4" />
         <span>{lang === "en" ? "Settings" : "Tetapan"}</span>
       </summary>
-      <div className="absolute right-0 top-full z-20 mt-2 w-72 rounded-md border bg-white p-4 shadow-lg">
+      <div className="absolute left-0 top-full z-20 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-md border bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.16)]">
         <>
           <Link href="/settings/data-sources" className="block rounded-md border px-3 py-2 text-sm font-medium hover:bg-slate-50">
             {lang === "en" ? "Data sources" : "Sumber data"}
