@@ -94,6 +94,26 @@ async function ensureDatabaseSchool(context: ActorContext) {
   `;
 }
 
+async function ensureAcademicYearConstraint() {
+  await requireDatabase()`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'academic_years'::regclass
+          AND conname = 'academic_years_year_check'
+          AND pg_get_constraintdef(oid) NOT LIKE '%[0-9]{4}%'
+      ) THEN
+        ALTER TABLE academic_years DROP CONSTRAINT academic_years_year_check;
+        ALTER TABLE academic_years
+          ADD CONSTRAINT academic_years_year_check CHECK (year ~ '^[0-9]{4}$');
+      END IF;
+    END
+    $$
+  `;
+}
+
 export async function usesDatabasePbdSource(schoolId: string) {
   if (!isDatabaseConfigured()) return false;
   const rows = await getDatabase()`SELECT pbd_source_mode FROM schools WHERE id = ${schoolId} LIMIT 1`;
@@ -138,6 +158,8 @@ async function ensureYearAndPeriod(context: ActorContext, year: string, semester
 
 export async function getDatabasePbdSetup(context: ActorContext, year: string, semester: "1" | "2" = "1"): Promise<DatabasePbdSetup> {
   if (!isDatabaseConfigured()) return { yearId: null, periodId: null, classes: [], subjects: [], rows: [] };
+  await ensureDatabaseSchool(context);
+  await ensureAcademicYearConstraint();
   const sql = getDatabase();
   const schoolId = context.school.id;
   const years = await sql`SELECT id FROM academic_years WHERE school_id = ${schoolId} AND year = ${year} LIMIT 1`;
@@ -171,6 +193,7 @@ export async function createDatabasePbdClass(context: ActorContext, raw: unknown
   const input = classInput.parse(raw);
   const sql = requireDatabase();
   await ensureDatabaseSchool(context);
+  await ensureAcademicYearConstraint();
   const schoolId = context.school.id;
   const yearId = `${schoolId}:${input.year}`;
   await sql.transaction((txn) => [

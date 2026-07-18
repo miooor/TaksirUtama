@@ -12,6 +12,9 @@ import {
 export type PbdActionState = { error?: string; success?: string };
 
 function message(error: unknown) {
+  if (error && typeof error === "object" && "code" in error) {
+    return "Data tidak dapat disimpan. Semak maklumat kelas dan cuba semula.";
+  }
   return error instanceof Error ? error.message : "Tindakan tidak dapat disimpan. Cuba lagi.";
 }
 
