@@ -9,8 +9,8 @@ const bands: TpBand[] = ["TP1", "TP2", "TP3", "TP4", "TP5", "TP6"];
 export type DatabasePbdSetup = {
   yearId: string | null;
   periodId: string | null;
-  classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null; active: boolean }>;
-  subjects: Array<{ id: string; code: string; name: string; active: boolean }>;
+  classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null; active: boolean; canDelete: boolean }>;
+  subjects: Array<{ id: string; code: string; name: string; active: boolean; canDelete: boolean }>;
   rows: Array<{ classSubjectId: string; classId: string; subjectId: string; className: string; subjectCode: string; subjectName: string; enrolledCount: number; active: boolean; entry: DatabasePbdEntry | null }>;
 };
 
@@ -86,6 +86,7 @@ const updateEnrollmentInput = z.object({
 });
 
 const archiveInput = z.object({ id: z.string().uuid(), kind: z.enum(["class", "subject", "assignment"]), restore: z.boolean().default(false) });
+const deleteSetupInput = z.object({ id: z.string().uuid(), kind: z.enum(["class", "subject"]) });
 
 export function parseDatabasePbdEntryInput(raw: unknown) {
   return entryInput.parse(raw);
@@ -198,11 +199,22 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
     periodId = (await ensureYearAndPeriod(context, year, semester)).periodId;
   }
   const [classesRaw, subjectsRaw] = await Promise.all([
-    yearId ? sql`SELECT id, name, enrolled_count, level_kind, level_number, active FROM school_classes WHERE school_id = ${schoolId} AND academic_year_id = ${yearId} ORDER BY active DESC, level_kind, level_number, name` : Promise.resolve([]),
-    sql`SELECT id, code, name, active FROM school_subjects WHERE school_id = ${schoolId} ORDER BY active DESC, name`,
+    yearId ? sql`
+      SELECT c.id, c.name, c.enrolled_count, c.level_kind, c.level_number, c.active,
+        NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.class_id = c.id AND cs.school_id = ${schoolId})
+          AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = c.id) AS can_delete
+      FROM school_classes c WHERE c.school_id = ${schoolId} AND c.academic_year_id = ${yearId}
+      ORDER BY c.active DESC, c.level_kind, c.level_number, c.name
+    ` : Promise.resolve([]),
+    sql`
+      SELECT s.id, s.code, s.name, s.active,
+        NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.subject_id = s.id AND cs.school_id = ${schoolId})
+          AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = s.id) AS can_delete
+      FROM school_subjects s WHERE s.school_id = ${schoolId} ORDER BY s.active DESC, s.name
+    `,
   ]);
-  const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number), active: Boolean(item.active) }));
-  const subjects = subjectsRaw.map((item) => ({ id: String(item.id), code: String(item.code), name: String(item.name), active: Boolean(item.active) }));
+  const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
+  const subjects = subjectsRaw.map((item) => ({ id: String(item.id), code: String(item.code), name: String(item.name), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
   const rowsRaw = periodId ? await sql`
     SELECT cs.id AS class_subject_id, c.id AS class_id, s.id AS subject_id, c.name AS class_name, s.code AS subject_code, s.name AS subject_name, cs.active,
       c.enrolled_count, e.id AS entry_id, e.revision, e.status, e.tp1_count, e.tp2_count, e.tp3_count,
@@ -379,6 +391,43 @@ export async function setDatabasePbdSetupArchived(context: ActorContext, raw: un
     if (!eligible.length) throw new Error("Pulihkan kelas dan subjek aktif dahulu sebelum memulihkan penetapan ini.");
   }
   await sql`UPDATE class_subjects SET active = ${active}, updated_at = now() WHERE id = ${input.id} AND school_id = ${schoolId}`;
+}
+
+export async function deleteDatabasePbdSetup(context: ActorContext, raw: unknown) {
+  const input = deleteSetupInput.parse(raw);
+  const sql = requireDatabase();
+  const schoolId = context.school.id;
+  const action = "pbd_setup_delete";
+  const result = input.kind === "class"
+    ? await sql`
+      WITH deleted AS (
+        DELETE FROM school_classes c
+        WHERE c.id = ${input.id} AND c.school_id = ${schoolId}
+          AND NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.class_id = c.id AND cs.school_id = ${schoolId})
+          AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = c.id)
+        RETURNING c.id, c.name
+      ), logged AS (
+        INSERT INTO audit_events (id, school_id, actor_id, actor_role, action, resource_type, resource_id, outcome, metadata_json)
+        SELECT ${randomUUID()}, ${schoolId}, ${context.actor.id}, ${context.actor.role}, ${action}, 'pbd_class', deleted.id, 'success', ${JSON.stringify({ permanent: true })}::jsonb
+        FROM deleted
+      )
+      SELECT id, name FROM deleted
+    `
+    : await sql`
+      WITH deleted AS (
+        DELETE FROM school_subjects s
+        WHERE s.id = ${input.id} AND s.school_id = ${schoolId}
+          AND NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.subject_id = s.id AND cs.school_id = ${schoolId})
+          AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = s.id)
+        RETURNING s.id, s.name
+      ), logged AS (
+        INSERT INTO audit_events (id, school_id, actor_id, actor_role, action, resource_type, resource_id, outcome, metadata_json)
+        SELECT ${randomUUID()}, ${schoolId}, ${context.actor.id}, ${context.actor.role}, ${action}, 'pbd_subject', deleted.id, 'success', ${JSON.stringify({ permanent: true })}::jsonb
+        FROM deleted
+      )
+      SELECT id, name FROM deleted
+    `;
+  if (!result.length) throw new Error("Rekod ini tidak lagi kosong atau telah dipadam. Gunakan Archive untuk rekod yang mempunyai sejarah.");
 }
 
 export async function getDatabasePbdRecords(context: ActorContext, year: string, semester: "1" | "2" = "1"): Promise<PbdSubjectClassRecord[]> {

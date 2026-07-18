@@ -6,6 +6,7 @@ import {
   assignDatabasePbdSubject,
   createDatabasePbdClass,
   createDatabasePbdSubject,
+  deleteDatabasePbdSetup,
   saveDatabasePbdEntry,
   saveDatabasePbdClassEntries,
   setDatabasePbdSetupArchived,
@@ -118,5 +119,14 @@ export async function archivePbdSetupAction(_: PbdActionState, formData: FormDat
     await setDatabasePbdSetupArchived(context, { ...Object.fromEntries(formData), restore: formData.get("restore") === "true" });
     refresh();
     return { success: formData.get("restore") === "true" ? "Rekod setup dipulihkan." : "Rekod setup diarkibkan." };
+  } catch (error) { return { error: message(error) }; }
+}
+
+export async function deletePbdSetupAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  try {
+    const context = await requireRole("school_admin", "platform_admin");
+    await deleteDatabasePbdSetup(context, Object.fromEntries(formData));
+    refresh();
+    return { success: "Rekod yang tidak digunakan telah dipadam secara kekal." };
   } catch (error) { return { error: message(error) }; }
 }
