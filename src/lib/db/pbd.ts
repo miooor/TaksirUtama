@@ -9,9 +9,9 @@ const bands: TpBand[] = ["TP1", "TP2", "TP3", "TP4", "TP5", "TP6"];
 export type DatabasePbdSetup = {
   yearId: string | null;
   periodId: string | null;
-  classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null }>;
-  subjects: Array<{ id: string; code: string; name: string }>;
-  rows: Array<{ classSubjectId: string; className: string; subjectCode: string; subjectName: string; enrolledCount: number; entry: DatabasePbdEntry | null }>;
+  classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null; active: boolean }>;
+  subjects: Array<{ id: string; code: string; name: string; active: boolean }>;
+  rows: Array<{ classSubjectId: string; classId: string; subjectId: string; className: string; subjectCode: string; subjectName: string; enrolledCount: number; active: boolean; entry: DatabasePbdEntry | null }>;
 };
 
 export type DatabasePbdEntry = {
@@ -63,6 +63,29 @@ const entryInput = z.object({
   tp6: nullableCount,
   notAssessed: nullableCount,
 });
+
+const bulkEntryInput = z.object({
+  classSubjectId: z.string().uuid(),
+  expectedRevision: z.coerce.number().int().min(0),
+  tp1: nullableCount, tp2: nullableCount, tp3: nullableCount, tp4: nullableCount, tp5: nullableCount, tp6: nullableCount,
+  notAssessed: nullableCount,
+});
+
+const bulkClassEntryInput = z.object({
+  classId: z.string().uuid(),
+  year: z.string().regex(/^\d{4}$/),
+  semester: z.enum(["1", "2"]),
+  finalizeClassSubjectId: z.string().uuid().nullable().optional(),
+  reopenClassSubjectId: z.string().uuid().nullable().optional(),
+  entries: z.array(bulkEntryInput).min(1),
+});
+
+const updateEnrollmentInput = z.object({
+  classId: z.string().uuid(),
+  enrolledCount: z.coerce.number().int().min(0).max(3000),
+});
+
+const archiveInput = z.object({ id: z.string().uuid(), kind: z.enum(["class", "subject", "assignment"]), restore: z.boolean().default(false) });
 
 export function parseDatabasePbdEntryInput(raw: unknown) {
   return entryInput.parse(raw);
@@ -175,25 +198,25 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
     periodId = (await ensureYearAndPeriod(context, year, semester)).periodId;
   }
   const [classesRaw, subjectsRaw] = await Promise.all([
-    yearId ? sql`SELECT id, name, enrolled_count, level_kind, level_number FROM school_classes WHERE school_id = ${schoolId} AND academic_year_id = ${yearId} AND active = true ORDER BY level_kind, level_number, name` : Promise.resolve([]),
-    sql`SELECT id, code, name FROM school_subjects WHERE school_id = ${schoolId} AND active = true ORDER BY name`,
+    yearId ? sql`SELECT id, name, enrolled_count, level_kind, level_number, active FROM school_classes WHERE school_id = ${schoolId} AND academic_year_id = ${yearId} ORDER BY active DESC, level_kind, level_number, name` : Promise.resolve([]),
+    sql`SELECT id, code, name, active FROM school_subjects WHERE school_id = ${schoolId} ORDER BY active DESC, name`,
   ]);
-  const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number) }));
-  const subjects = subjectsRaw.map((item) => ({ id: String(item.id), code: String(item.code), name: String(item.name) }));
+  const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number), active: Boolean(item.active) }));
+  const subjects = subjectsRaw.map((item) => ({ id: String(item.id), code: String(item.code), name: String(item.name), active: Boolean(item.active) }));
   const rowsRaw = periodId ? await sql`
-    SELECT cs.id AS class_subject_id, c.name AS class_name, s.code AS subject_code, s.name AS subject_name,
+    SELECT cs.id AS class_subject_id, c.id AS class_id, s.id AS subject_id, c.name AS class_name, s.code AS subject_code, s.name AS subject_name, cs.active,
       c.enrolled_count, e.id AS entry_id, e.revision, e.status, e.tp1_count, e.tp2_count, e.tp3_count,
       e.tp4_count, e.tp5_count, e.tp6_count, e.not_assessed_count
     FROM class_subjects cs
     JOIN school_classes c ON c.id = cs.class_id AND c.school_id = ${schoolId}
     JOIN school_subjects s ON s.id = cs.subject_id AND s.school_id = ${schoolId}
     LEFT JOIN pbd_class_subject_entries e ON e.class_subject_id = cs.id AND e.period_id = ${periodId} AND e.school_id = ${schoolId}
-    WHERE cs.school_id = ${schoolId} AND cs.active = true AND c.academic_year_id = ${yearId}
-    ORDER BY c.name, s.name
+    WHERE cs.school_id = ${schoolId} AND c.academic_year_id = ${yearId}
+    ORDER BY cs.active DESC, c.name, s.name
   ` : [];
   return {
     yearId, periodId, classes, subjects,
-    rows: rowsRaw.map((item) => ({ classSubjectId: String(item.class_subject_id), className: String(item.class_name), subjectCode: String(item.subject_code), subjectName: String(item.subject_name), enrolledCount: Number(item.enrolled_count), entry: item.entry_id ? entryFromRow(record(item)) : null })),
+    rows: rowsRaw.map((item) => ({ classSubjectId: String(item.class_subject_id), classId: String(item.class_id), subjectId: String(item.subject_id), className: String(item.class_name), subjectCode: String(item.subject_code), subjectName: String(item.subject_name), enrolledCount: Number(item.enrolled_count), active: Boolean(item.active), entry: item.entry_id ? entryFromRow(record(item)) : null })),
   };
 }
 
@@ -262,9 +285,106 @@ export async function saveDatabasePbdEntry(context: ActorContext, raw: unknown) 
   ]);
 }
 
+export async function saveDatabasePbdClassEntries(context: ActorContext, raw: unknown) {
+  const input = bulkClassEntryInput.parse(raw);
+  if (input.finalizeClassSubjectId && input.reopenClassSubjectId) throw new Error("Pilih sama ada muktamad atau buka semula satu subjek sahaja.");
+  const sql = requireDatabase();
+  const { periodId } = await ensureYearAndPeriod(context, input.year, input.semester);
+  const rows = await sql`
+    SELECT * FROM pbd_save_class_entries(
+      ${context.school.id}, ${periodId}, ${input.classId}, ${context.actor.id},
+      ${JSON.stringify(input.entries.map((entry) => ({
+        class_subject_id: entry.classSubjectId, expected_revision: entry.expectedRevision,
+        tp1: entry.tp1, tp2: entry.tp2, tp3: entry.tp3, tp4: entry.tp4, tp5: entry.tp5, tp6: entry.tp6,
+        not_assessed: entry.notAssessed,
+      })))}::jsonb,
+      ${input.finalizeClassSubjectId ?? null}, ${input.reopenClassSubjectId ?? null}
+    )
+  `;
+  return rows.map((row) => ({
+    classSubjectId: String(row.class_subject_id), entryId: row.entry_id ? String(row.entry_id) : null,
+    revision: Number(row.revision), status: row.status === "final" ? "final" as const : "draft" as const,
+    enrolledCount: Number(row.enrolled_count), changed: Boolean(row.changed),
+  }));
+}
+
+export async function updateDatabasePbdClassEnrollment(context: ActorContext, raw: unknown) {
+  const input = updateEnrollmentInput.parse(raw);
+  const sql = requireDatabase();
+  const schoolId = context.school.id;
+  const classes = await sql`SELECT id FROM school_classes WHERE id = ${input.classId} AND school_id = ${schoolId} AND active = true LIMIT 1`;
+  if (!classes.length) throw new Error("Kelas tidak ditemui atau telah diarkibkan.");
+  const drafts = await sql`
+    SELECT e.*, cs.id AS class_subject_id
+    FROM pbd_class_subject_entries e
+    JOIN class_subjects cs ON cs.id = e.class_subject_id AND cs.school_id = ${schoolId}
+    WHERE cs.class_id = ${input.classId} AND e.school_id = ${schoolId} AND e.status = 'draft'
+  `;
+  await sql.transaction((txn) => [
+    txn`UPDATE school_classes SET enrolled_count = ${input.enrolledCount}, updated_at = now() WHERE id = ${input.classId} AND school_id = ${schoolId} AND active = true`,
+    txn`UPDATE pbd_class_subject_entries e SET enrolled_count = ${input.enrolledCount}, revision = revision + 1, updated_by = ${context.actor.id}, updated_at = now()
+      FROM class_subjects cs WHERE e.class_subject_id = cs.id AND cs.class_id = ${input.classId} AND e.school_id = ${schoolId} AND e.status = 'draft'`,
+    ...drafts.map((draft) => txn`INSERT INTO pbd_entry_revisions (id, school_id, entry_id, actor_id, action, previous_json, next_json)
+      VALUES (${randomUUID()}, ${schoolId}, ${String(draft.id)}, ${context.actor.id}, 'enrolment_sync',
+        ${JSON.stringify({ enrolledCount: Number(draft.enrolled_count) })}::jsonb,
+        ${JSON.stringify({ enrolledCount: input.enrolledCount })}::jsonb)`),
+  ]);
+}
+
+export async function setDatabasePbdSetupArchived(context: ActorContext, raw: unknown) {
+  const input = archiveInput.parse(raw);
+  const sql = requireDatabase();
+  const schoolId = context.school.id;
+  const target = input.kind === "class"
+    ? await sql`SELECT id FROM school_classes WHERE id = ${input.id} AND school_id = ${schoolId} LIMIT 1`
+    : input.kind === "subject"
+      ? await sql`SELECT id FROM school_subjects WHERE id = ${input.id} AND school_id = ${schoolId} LIMIT 1`
+      : await sql`SELECT id FROM class_subjects WHERE id = ${input.id} AND school_id = ${schoolId} LIMIT 1`;
+  if (!target.length) throw new Error("Rekod setup tidak ditemui.");
+  if (!input.restore) {
+    const dataRows = await sql.query(
+      input.kind === "class"
+        ? `SELECT c.name FROM pbd_class_subject_entries e JOIN class_subjects cs ON cs.id = e.class_subject_id JOIN school_classes c ON c.id = cs.class_id WHERE c.id = $1 AND e.school_id = $2 AND (e.status = 'final' OR e.tp1_count IS NOT NULL OR e.tp2_count IS NOT NULL OR e.tp3_count IS NOT NULL OR e.tp4_count IS NOT NULL OR e.tp5_count IS NOT NULL OR e.tp6_count IS NOT NULL OR e.not_assessed_count IS NOT NULL) LIMIT 1`
+        : input.kind === "subject"
+          ? `SELECT s.name FROM pbd_class_subject_entries e JOIN class_subjects cs ON cs.id = e.class_subject_id JOIN school_subjects s ON s.id = cs.subject_id WHERE s.id = $1 AND e.school_id = $2 AND (e.status = 'final' OR e.tp1_count IS NOT NULL OR e.tp2_count IS NOT NULL OR e.tp3_count IS NOT NULL OR e.tp4_count IS NOT NULL OR e.tp5_count IS NOT NULL OR e.tp6_count IS NOT NULL OR e.not_assessed_count IS NOT NULL) LIMIT 1`
+          : `SELECT id FROM pbd_class_subject_entries WHERE class_subject_id = $1 AND school_id = $2 AND (status = 'final' OR tp1_count IS NOT NULL OR tp2_count IS NOT NULL OR tp3_count IS NOT NULL OR tp4_count IS NOT NULL OR tp5_count IS NOT NULL OR tp6_count IS NOT NULL OR not_assessed_count IS NOT NULL) LIMIT 1`,
+      [input.id, schoolId],
+    );
+    if (dataRows.length) throw new Error("Rekod ini mempunyai data TP atau rekod muktamad dan tidak boleh diarkibkan.");
+  }
+  const active = input.restore;
+  if (input.kind === "class") {
+    await sql.transaction((txn) => [
+      txn`UPDATE school_classes SET active = ${active}, updated_at = now() WHERE id = ${input.id} AND school_id = ${schoolId}`,
+      txn`UPDATE class_subjects cs SET active = ${active}, updated_at = now()
+        FROM school_subjects s WHERE cs.subject_id = s.id AND cs.class_id = ${input.id} AND cs.school_id = ${schoolId} AND (NOT ${active} OR s.active = true)`,
+    ]);
+    return;
+  }
+  if (input.kind === "subject") {
+    await sql.transaction((txn) => [
+      txn`UPDATE school_subjects SET active = ${active}, updated_at = now() WHERE id = ${input.id} AND school_id = ${schoolId}`,
+      txn`UPDATE class_subjects cs SET active = ${active}, updated_at = now()
+        FROM school_classes c WHERE cs.class_id = c.id AND cs.subject_id = ${input.id} AND cs.school_id = ${schoolId} AND (NOT ${active} OR c.active = true)`,
+    ]);
+    return;
+  }
+  if (input.restore) {
+    const eligible = await sql`
+      SELECT cs.id FROM class_subjects cs
+      JOIN school_classes c ON c.id = cs.class_id AND c.active = true
+      JOIN school_subjects s ON s.id = cs.subject_id AND s.active = true
+      WHERE cs.id = ${input.id} AND cs.school_id = ${schoolId}
+    `;
+    if (!eligible.length) throw new Error("Pulihkan kelas dan subjek aktif dahulu sebelum memulihkan penetapan ini.");
+  }
+  await sql`UPDATE class_subjects SET active = ${active}, updated_at = now() WHERE id = ${input.id} AND school_id = ${schoolId}`;
+}
+
 export async function getDatabasePbdRecords(context: ActorContext, year: string, semester: "1" | "2" = "1"): Promise<PbdSubjectClassRecord[]> {
   const setup = await getDatabasePbdSetup(context, year, semester);
   return setup.rows.flatMap((row) => {
+    if (!row.active) return [];
     const entry = row.entry;
     if (!entry) return [];
     const counts = Object.fromEntries(bands.map((band) => [band, entry.counts[band] ?? 0])) as Record<TpBand, number>;

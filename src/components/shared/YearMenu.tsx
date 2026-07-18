@@ -16,6 +16,12 @@ function hrefForYear(pathname: string, searchParams: { toString(): string }, yea
   if (pathname.startsWith("/pbd/periods/")) {
     return pathname.replace(/^\/pbd\/periods\/\d{4}/, `/pbd/periods/${year}`);
   }
+  if (pathname === "/pbd/entry" || pathname === "/pbd/setup") {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("year", year);
+    params.delete("classId");
+    return `${pathname}?${params.toString()}`;
+  }
   if (pathname.startsWith("/upsa")) {
     return `/assessments/${year}/upsa/classes`;
   }

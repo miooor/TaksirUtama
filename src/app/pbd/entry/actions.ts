@@ -7,9 +7,12 @@ import {
   createDatabasePbdClass,
   createDatabasePbdSubject,
   saveDatabasePbdEntry,
+  saveDatabasePbdClassEntries,
+  setDatabasePbdSetupArchived,
+  updateDatabasePbdClassEnrollment,
 } from "@/lib/db/pbd";
 
-export type PbdActionState = { error?: string; success?: string };
+export type PbdActionState = { error?: string; success?: string; changedCount?: number; savedAt?: string };
 
 function message(error: unknown) {
   if (error && typeof error === "object" && "code" in error) {
@@ -21,6 +24,7 @@ function message(error: unknown) {
 function refresh() {
   updateTag("pbd-database");
   revalidatePath("/pbd/entry");
+  revalidatePath("/pbd/setup");
   revalidatePath("/dashboard");
   revalidatePath("/pbd/periods/[year]", "page");
 }
@@ -67,4 +71,52 @@ export async function savePbdEntryAction(_: PbdActionState, formData: FormData):
   } catch (error) {
     return { error: message(error) };
   }
+}
+
+function readRows(formData: FormData) {
+  return formData.getAll("classSubjectId").map((value) => {
+    const id = String(value);
+    const field = (name: string) => formData.get(`${name}:${id}`);
+    return {
+      classSubjectId: id,
+      expectedRevision: field("revision"),
+      tp1: field("tp1"), tp2: field("tp2"), tp3: field("tp3"), tp4: field("tp4"), tp5: field("tp5"), tp6: field("tp6"),
+      notAssessed: field("notAssessed"),
+    };
+  });
+}
+
+export async function savePbdClassEntriesAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  try {
+    const context = await requireRole("school_admin", "platform_admin");
+    const result = await saveDatabasePbdClassEntries(context, {
+      classId: formData.get("classId"), year: formData.get("year"), semester: formData.get("semester"),
+      finalizeClassSubjectId: formData.get("intent") === "finalize" ? formData.get("targetClassSubjectId") : null,
+      reopenClassSubjectId: formData.get("intent") === "reopen" ? formData.get("targetClassSubjectId") : null,
+      entries: readRows(formData),
+    });
+    refresh();
+    const intent = formData.get("intent");
+    return { success: intent === "finalize" ? "Draf kelas disimpan dan subjek dimuktamadkan." : intent === "reopen" ? "Draf kelas disimpan dan subjek dibuka semula." : "Semua draf kelas disimpan.", changedCount: result.filter((row) => row.changed).length, savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }) };
+  } catch (error) {
+    return { error: message(error) };
+  }
+}
+
+export async function updatePbdClassEnrollmentAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  try {
+    const context = await requireRole("school_admin", "platform_admin");
+    await updateDatabasePbdClassEnrollment(context, Object.fromEntries(formData));
+    refresh();
+    return { success: "Jumlah murid kelas dan semua draf aktif telah diselaraskan." };
+  } catch (error) { return { error: message(error) }; }
+}
+
+export async function archivePbdSetupAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  try {
+    const context = await requireRole("school_admin", "platform_admin");
+    await setDatabasePbdSetupArchived(context, { ...Object.fromEntries(formData), restore: formData.get("restore") === "true" });
+    refresh();
+    return { success: formData.get("restore") === "true" ? "Rekod setup dipulihkan." : "Rekod setup diarkibkan." };
+  } catch (error) { return { error: message(error) }; }
 }
