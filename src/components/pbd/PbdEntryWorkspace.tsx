@@ -26,7 +26,7 @@ function AddClassForm({ year }: { year: string }) {
       <input type="hidden" name="year" value={year} />
       <label className="text-sm font-medium">Nama kelas<input name="name" required placeholder="4 Amanah" className="mt-1 w-full rounded-md border bg-white px-3 py-2" /></label>
       <label className="text-sm font-medium">Peringkat<select name="levelKind" defaultValue="tahun" className="mt-1 w-full rounded-md border bg-white px-3 py-2"><option value="tahun">Tahun</option><option value="tingkatan">Tingkatan</option><option value="peralihan">Peralihan</option></select></label>
-      <label className="text-sm font-medium">Nombor peringkat<input name="levelNumber" type="number" min="1" max="6" defaultValue="1" className="mt-1 w-full rounded-md border bg-white px-3 py-2" /></label>
+      <label className="text-sm font-medium">Tahun/Tingkatan<input name="levelNumber" type="number" min="1" max="6" defaultValue="1" className="mt-1 w-full rounded-md border bg-white px-3 py-2" /></label>
       <label className="text-sm font-medium">Jumlah murid<input name="enrolledCount" type="number" min="0" required className="mt-1 w-full rounded-md border bg-white px-3 py-2" /></label>
       <button disabled={pending} className="self-end rounded-md bg-teal-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">Tambah kelas</button>
       <div className="sm:col-span-2 lg:col-span-5"><ActionMessage state={state} /></div>
