@@ -33,7 +33,9 @@ DECLARE
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM database_pbd_periods
-    WHERE id = p_period_id AND school_id = p_school_id AND status IN ('draft', 'open')
+    WHERE database_pbd_periods.id = p_period_id
+      AND database_pbd_periods.school_id = p_school_id
+      AND database_pbd_periods.status IN ('draft', 'open')
   ) THEN
     RAISE EXCEPTION 'Tempoh PBD tidak sah atau telah ditutup.';
   END IF;

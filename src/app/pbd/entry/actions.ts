@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { requireRole } from "@/lib/auth/actor";
+import { logEvent } from "@/lib/observability/logger";
 import {
   assignDatabasePbdSubject,
   createDatabasePbdClass,
@@ -106,8 +107,10 @@ export async function savePbdClassEntriesAction(_: PbdActionState, formData: For
 }
 
 export async function savePbdSubjectEntriesAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  let logContext: { schoolId?: string; actorId?: string; role?: string } = {};
   try {
     const context = await requireRole("school_admin", "platform_admin");
+    logContext = { schoolId: context.school.id, actorId: context.actor.id, role: context.actor.role };
     const result = await saveDatabasePbdSubjectEntries(context, {
       subjectId: formData.get("subjectId"), year: formData.get("year"), semester: formData.get("semester"),
       finalizeClassSubjectId: formData.get("intent") === "finalize" ? formData.get("targetClassSubjectId") : null,
@@ -118,11 +121,18 @@ export async function savePbdSubjectEntriesAction(_: PbdActionState, formData: F
     const intent = formData.get("intent");
     const changedCount = result.filter((row) => row.changed).length;
     return {
-      success: intent === "finalize" ? "Semua draf subjek disimpan dan kelas dimuktamadkan." : intent === "reopen" ? "Semua draf subjek disimpan dan kelas dibuka semula." : "Semua draf subjek disimpan.",
+      success: intent === "finalize" ? "Semua draf subjek disimpan dan kelas dihantar." : intent === "reopen" ? "Semua draf subjek disimpan dan kelas dibuka semula." : "Semua draf subjek disimpan.",
       changedCount,
       savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }),
     };
   } catch (error) {
+    const databaseCode = error && typeof error === "object" && "code" in error ? String(error.code) : null;
+    logEvent("error", "pbd_subject_entries_save_failed", {
+      route: "/pbd/entry",
+      operation: String(formData.get("intent") ?? "save"),
+      ...logContext,
+      errorCategory: databaseCode ? `database_${databaseCode}` : error instanceof Error ? error.name : "unknown_error",
+    });
     return { error: message(error) };
   }
 }
