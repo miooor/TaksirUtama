@@ -68,6 +68,7 @@ export default async function DashboardPage({
               key={value}
               href={semesterHref(selectedYear, value)}
               aria-current={semester === value ? "page" : undefined}
+              style={semester === value ? { color: "#ffffff" } : undefined}
               className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${semester === value ? "bg-stone-800 text-white" : "text-slate-600 hover:bg-stone-200 hover:text-slate-950"}`}
             >
               Semester {value}
