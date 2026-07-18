@@ -25,6 +25,7 @@ export function AppNav({
   const searchParams = useSearchParams();
   const pathYear = pathname.match(/^\/assessments\/(\d{4})\//)?.[1] ?? pathname.match(/^\/pbd\/periods\/(\d{4})(?:\/|$)/)?.[1];
   const queryYear = searchParams.get("year");
+  const selectedSemester = searchParams.get("semester") === "2" ? "2" : "1";
   const selectedYear = (pathYear && years.includes(pathYear)) || (pathYear && years.length === 0)
     ? pathYear
       : queryYear && years.includes(queryYear)
@@ -32,9 +33,9 @@ export function AppNav({
       : defaultYear;
   const upsaHref = selectedYear ? `/assessments/${selectedYear}/upsa/classes` : upsaFallbackHref;
   const uasaHref = selectedYear && uasaReadyYears.includes(selectedYear) ? `/assessments/${selectedYear}/uasa/classes` : uasaFallbackHref;
-  const pbdHref = selectedYear ? `/pbd/periods/${selectedYear}` : pbdFallbackHref;
+  const pbdHref = selectedYear ? `/pbd/periods/${selectedYear}?semester=${selectedSemester}` : pbdFallbackHref;
   const items = [
-    { href: selectedYear ? `/dashboard?year=${selectedYear}` : "/dashboard", label: "Dashboard", active: pathname === "/dashboard" },
+    { href: selectedYear ? `/dashboard?year=${selectedYear}&semester=${selectedSemester}` : "/dashboard", label: "Dashboard", active: pathname === "/dashboard" },
     { href: upsaHref, label: "UPSA", active: pathname.startsWith(`/assessments/${selectedYear}/upsa`) || pathname.startsWith("/upsa") },
     { href: uasaHref, label: "UASA", active: pathname.startsWith(`/assessments/${selectedYear}/uasa`) || pathname.startsWith("/uasa") },
     { href: pbdHref, label: "PBD", active: pathname.startsWith(`/pbd/periods/${selectedYear}`) || pathname === "/pbd" },

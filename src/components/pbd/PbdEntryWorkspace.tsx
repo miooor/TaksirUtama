@@ -16,6 +16,8 @@ import {
   subjectEntryRecoveryKey,
   subjectEntryState,
   subjectEntryTotal,
+  pbdSemesterSwitchMessage,
+  pbdSubjectSaveFeedback,
   type SubjectEntryField,
   type SubjectEntryFilter,
   type SubjectEntryValues,
@@ -31,6 +33,15 @@ const filterLabels: Array<{ id: SubjectEntryFilter; label: string }> = [
   { id: "all", label: "Semua" },
   { id: "final", label: "Muktamad" },
 ];
+
+function SemesterSelector({ semester, onSelect }: { semester: "1" | "2"; onSelect: (semester: "1" | "2") => void }) {
+  return <div className="min-w-0">
+    <p className="text-sm font-semibold text-slate-900">Semester pengisian</p>
+    <div className="mt-2 grid max-w-sm grid-cols-2 gap-2" aria-label="Pilih semester pengisian">
+      {(["1", "2"] as const).map((value) => <button key={value} type="button" onClick={() => onSelect(value)} aria-current={semester === value ? "page" : undefined} className={`rounded-md px-4 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 ${semester === value ? "bg-stone-800 text-white" : "bg-stone-100 text-slate-700 hover:bg-stone-200"}`} style={semester === value ? { color: "#ffffff" } : undefined}>Semester {value}</button>)}
+    </div>
+  </div>;
+}
 
 function valuesFromRow(row: SetupRow): SubjectEntryValues {
   const entry = row.entry;
@@ -133,6 +144,12 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
     router.push(`/pbd/entry?year=${year}&semester=${semester}&subjectId=${subjectId}`);
   }
 
+  function switchSemester(nextSemester: "1" | "2") {
+    if (nextSemester === semester) return;
+    if (dirty && !window.confirm(pbdSemesterSwitchMessage(semester, nextSemester))) return;
+    router.push(`/pbd/entry?year=${year}&semester=${nextSemester}&subjectId=${selectedSubject?.id ?? ""}`);
+  }
+
   function rowRequired(row: SetupRow) { return row.entry?.status === "final" ? row.entry.enrolledCount : row.enrolledCount; }
   function rowState(row: SetupRow) { return subjectEntryState(values[row.classSubjectId] ?? valuesFromRow(row), rowRequired(row), row.entry?.status === "final"); }
   const counts: Record<SubjectEntryFilter, number> = {
@@ -172,14 +189,15 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
   }
 
   if (!selectedSubject) {
-    return <section className="mt-6 rounded-lg border border-stone-200 bg-white p-6"><h2 className="text-lg font-semibold">Belum ada subjek yang ditetapkan</h2><p className="mt-2 text-sm text-slate-600">Tetapkan subjek kepada sekurang-kurangnya satu kelas dalam PBD Setup.</p><Link className="mt-4 inline-block rounded-md bg-teal-800 px-4 py-2 text-sm font-medium text-white" href={`/pbd/setup?year=${year}&semester=${semester}`}>Buka PBD Setup</Link></section>;
+    return <div className="mt-6 min-w-0 space-y-5"><section className="rounded-lg bg-white p-4 sm:p-5"><SemesterSelector semester={semester} onSelect={switchSemester} /></section><section className="rounded-lg border border-stone-200 bg-white p-6"><h2 className="text-lg font-semibold">Belum ada subjek yang ditetapkan</h2><p className="mt-2 text-sm text-slate-600">Tetapkan subjek kepada sekurang-kurangnya satu kelas dalam PBD Setup.</p><Link className="mt-4 inline-block rounded-md bg-teal-800 px-4 py-2 text-sm font-medium text-white" href={`/pbd/setup?year=${year}&semester=${semester}`}>Buka PBD Setup</Link></section></div>;
   }
 
   return <div className="mt-6 min-w-0 space-y-5">
     <section className="rounded-lg bg-white p-4 sm:p-5">
+      <div className="mb-5"><SemesterSelector semester={semester} onSelect={switchSemester} /></div>
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(15rem,1fr)_auto] lg:items-end">
         <label className="block min-w-0 text-sm font-medium text-slate-700">Subjek<select value={selectedSubject.id} onChange={(event) => switchSubject(event.target.value)} className="mt-1.5 w-full rounded-md border border-stone-300 bg-white px-3 py-2.5 text-base">{eligibleSubjects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name} · {subjectProgress(item.id)}</option>)}</select></label>
-        <div className="min-w-0 lg:text-right"><p className="text-sm font-medium text-slate-900">{counts.final}/{rows.length} kelas muktamad</p><p className="mt-1 text-sm text-slate-600">Semester {semester} · {year} · {totalPupils} murid</p></div>
+        <div className="min-w-0 lg:text-right"><p className="text-sm font-medium text-slate-900">{counts.final}/{rows.length} kelas muktamad</p><p className="mt-1 text-sm text-slate-600">{totalPupils} murid</p></div>
       </div>
       <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-3"><dl className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-sm"><div><dt className="inline text-slate-600">Belum diisi </dt><dd className="inline font-semibold text-slate-950">{counts.empty}</dd></div><div><dt className="inline text-slate-600">Tidak sepadan </dt><dd className="inline font-semibold text-amber-800">{counts.mismatch}</dd></div><div><dt className="inline text-slate-600">Sedia </dt><dd className="inline font-semibold text-teal-800">{counts.ready}</dd></div></dl><Link href={`/pbd/setup?year=${year}&semester=${semester}&view=assignments`} className="text-sm font-medium text-teal-800 hover:text-teal-950">Urus penetapan</Link></div>
     </section>
@@ -212,12 +230,12 @@ export function PbdEntryWorkspace({ setup, year, semester, selectedSubjectId }: 
                 const label = field === "notAssessed" ? "Belum ditaksir" : `TP${index + 1}`;
                 return <label key={field} className="min-w-0 text-xs font-medium text-slate-600"><span className="xl:sr-only">{label}</span><input aria-label={`${label} untuk ${row.className}`} id={`pbd-${field}-${row.classSubjectId}`} name={`${field}:${row.classSubjectId}`} value={rowValues[field]} onChange={(event) => updateField(row.classSubjectId, field, event.target.value)} onKeyDown={(event) => handleEnter(event, row.classSubjectId, field)} readOnly={finalized} aria-readonly={finalized} type="number" min="0" className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 bg-white px-2 py-2 text-base text-slate-900 read-only:cursor-not-allowed read-only:bg-stone-100 read-only:text-slate-600 xl:mt-0" /><span className="mt-1 block text-xs font-normal text-slate-500">{percentage === null ? "—" : `${percentage.toFixed(1)}%`}</span></label>;
               })}</div>
-              <div className="mt-4 flex min-w-0 flex-col gap-3 border-t border-stone-100 pt-3 sm:flex-row sm:items-center sm:justify-between xl:contents"><div className="min-w-0"><p className="text-sm text-slate-600"><span className="font-medium text-slate-950">{total}/{required}</span></p><p className={`mt-1 text-sm font-medium ${balance.kind === "complete" ? "text-teal-800" : "text-amber-800"}`}>{balance.label}</p></div><div className="flex flex-col gap-2 sm:flex-row xl:flex-col">{!finalized ? <button type="button" onClick={() => fillBlanks(row.classSubjectId)} className="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-slate-800">Isi kosong dengan 0</button> : null}<button type="submit" name="intent" value={finalized ? "reopen" : "finalize"} onClick={() => { if (targetRef.current) targetRef.current.value = row.classSubjectId; }} disabled={pending} className="rounded-md border border-teal-800 px-3 py-2 text-sm font-medium text-teal-900 disabled:opacity-60">{finalized ? "Buka semula" : "Simpan & Hantar"}</button></div></div>
+              <div className="mt-4 flex min-w-0 flex-col gap-3 border-t border-stone-100 pt-3 sm:flex-row sm:items-center sm:justify-between xl:contents"><div className="min-w-0"><p className="text-sm text-slate-600"><span className="font-medium text-slate-950">{total}/{required}</span></p><p className={`mt-1 text-sm font-medium ${balance.kind === "complete" ? "text-teal-800" : "text-amber-800"}`}>{balance.label}</p></div><div className="flex flex-col gap-2 sm:flex-row xl:flex-col">{!finalized ? <button type="button" onClick={() => fillBlanks(row.classSubjectId)} className="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium text-slate-800">Isi kosong dengan 0</button> : null}<button type="submit" name="intent" value={finalized ? "reopen" : "finalize"} onClick={() => { if (targetRef.current) targetRef.current.value = row.classSubjectId; }} disabled={pending} className="rounded-md border border-teal-800 px-3 py-2 text-sm font-medium text-teal-900 disabled:opacity-60">{finalized ? "Buka semula" : `Simpan & Hantar · Semester ${semester}`}</button></div></div>
             </article>;
           })}</section>;
         })}
       </section>
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-300 bg-white lg:left-[208px] xl:left-[240px]"><div className="mx-auto min-w-0 max-w-7xl p-3 sm:flex sm:items-center sm:justify-between sm:px-6"><div className="min-w-0 text-sm text-slate-600">{state.error ? <span className="font-medium text-rose-700" role="alert">{state.error}</span> : state.success ? <span className="font-medium text-teal-800" role="status">{state.changedCount ?? 0} kelas berubah dan disimpan pada {state.savedAt}.</span> : dirty ? "Perubahan belum disimpan." : "Semua perubahan telah disimpan."}</div><button type="submit" name="intent" value="save" disabled={pending} className="mt-3 w-full rounded-md bg-teal-800 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 sm:mt-0 sm:w-auto">{pending ? "Menyimpan…" : "Simpan semua draf"}</button></div></div>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-300 bg-white lg:left-[208px] xl:left-[240px]"><div className="mx-auto min-w-0 max-w-7xl p-3 sm:flex sm:items-center sm:justify-between sm:px-6"><div className="min-w-0 text-sm text-slate-600">{state.error ? <span className="font-medium text-rose-700" role="alert">{state.error}</span> : state.success ? <span className="font-medium text-teal-800" role="status">{pbdSubjectSaveFeedback(state.changedCount ?? 0, state.semester ?? semester, state.savedAt)}</span> : dirty ? "Perubahan belum disimpan." : "Semua perubahan telah disimpan."}</div><button type="submit" name="intent" value="save" disabled={pending} className="mt-3 w-full rounded-md bg-teal-800 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 sm:mt-0 sm:w-auto">{pending ? "Menyimpan…" : "Simpan semua draf"}</button></div></div>
     </form>
   </div>;
 }

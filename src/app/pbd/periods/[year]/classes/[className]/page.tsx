@@ -7,24 +7,25 @@ import { PbdClassTable } from "@/components/pbd/PbdClassTable";
 import { calculatePbdClassAnalysis } from "@/lib/pbd/analysis";
 import { getAllPbdRecords } from "@/lib/pbd/data";
 import { getLanguage, text } from "@/lib/i18n";
-import { getPbdPageContext, pbdApiBasePath, pbdBasePath } from "@/lib/pbdPages";
+import { getPbdPageContext, pbdApiBasePath, pbdBasePath, pbdSemesterHref } from "@/lib/pbdPages";
 
-export default async function PbdPeriodClassPage({ params }: { params: Promise<{ year: string; className: string }> }) {
+export default async function PbdPeriodClassPage({ params, searchParams }: { params: Promise<{ year: string; className: string }>; searchParams: Promise<{ semester?: string }> }) {
   const { className } = await params;
-  const { school, period } = await getPbdPageContext(params);
+  const query = await searchParams;
+  const { school, period, semester } = await getPbdPageContext(params, query.semester);
   const analysis = calculatePbdClassAnalysis(decodeURIComponent(className), await getAllPbdRecords(school, period));
   const language = await getLanguage();
   return (
     <AppShell>
       <PageHeader
-        eyebrow={`PBD ${period.year}`}
+        eyebrow={`Semester ${semester} · ${period.year}`}
         title={analysis.className}
         icon={School}
         actions={
           <>
-            <Link href={`${pbdBasePath(period)}/classes`} className="rounded-md border px-3 py-2">{text(language, { ms: "Semua kelas", en: "All classes" })}</Link>
-            <a href={`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/csv`} className="rounded-md border px-3 py-2">{text(language, { ms: "Muat turun CSV", en: "Download CSV" })}</a>
-            <a href={`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/pdf`} className="action-accent">{text(language, { ms: "Muat turun PDF", en: "Download PDF" })}</a>
+            <Link href={pbdSemesterHref(`${pbdBasePath(period)}/classes`, semester)} className="rounded-md border px-3 py-2">{text(language, { ms: "Semua kelas", en: "All classes" })}</Link>
+            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/csv`, semester)} className="rounded-md border px-3 py-2">{text(language, { ms: "Muat turun CSV", en: "Download CSV" })}</a>
+            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/pdf`, semester)} className="action-accent">{text(language, { ms: "Muat turun PDF", en: "Download PDF" })}</a>
           </>
         }
       />

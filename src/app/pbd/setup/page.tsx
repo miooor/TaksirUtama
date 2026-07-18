@@ -7,12 +7,13 @@ import { requireRole } from "@/lib/auth/actor";
 import { getDatabasePbdSetup } from "@/lib/db/pbd";
 import { isDatabaseConfigured } from "@/lib/db/client";
 import { resolvePbdSetupView } from "@/lib/pbd/setupWorkflow";
+import { resolvePbdSemester } from "@/lib/pbdPages";
 
 export default async function PbdSetupPage({ searchParams }: { searchParams: Promise<{ year?: string; semester?: string; view?: string }> }) {
   const context = await requireRole("school_admin", "platform_admin");
   const query = await searchParams;
   const year = query.year && /^\d{4}$/.test(query.year) ? query.year : context.school.defaultPbdPeriod?.year ?? "2026";
-  const semester = query.semester === "2" ? "2" : "1";
+  const semester = resolvePbdSemester(query.semester, context.school.defaultPbdPeriod?.semester);
   const configured = isDatabaseConfigured();
   const setup = configured ? await getDatabasePbdSetup(context, year, semester) : null;
   const view = setup ? resolvePbdSetupView(query.view, setup) : "classes";

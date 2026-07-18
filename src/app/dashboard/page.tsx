@@ -159,7 +159,7 @@ export default async function DashboardPage({
         <span className="flex items-center gap-2 font-medium text-slate-800"><ClipboardList className="h-4 w-4" />Pentaksiran lain</span>
         <Link href={assessmentPath(upsaPeriod, "/classes")} className="hover:text-slate-950">UPSA</Link>
         <Link href={assessmentPath(uasaPeriod, "/classes")} className="hover:text-slate-950">UASA</Link>
-        <Link href={`/pbd/periods/${selectedYear}`} className="hover:text-slate-950">Analisis PBD</Link>
+        <Link href={`/pbd/periods/${selectedYear}?semester=${semester}`} className="hover:text-slate-950">Analisis PBD</Link>
       </nav>
     </AppShell>
   );

@@ -47,6 +47,15 @@ export function subjectEntryRecoveryKey(schoolId: string, year: string, semester
   return `pbd-subject-entry:${schoolId}:${year}:${semester}:${subjectId}`;
 }
 
+export function pbdSemesterSwitchMessage(currentSemester: string, nextSemester: string) {
+  return `Perubahan Semester ${currentSemester} belum disimpan. Tukar ke Semester ${nextSemester}?`;
+}
+
+export function pbdSubjectSaveFeedback(changedCount: number, semester: string, savedAt?: string) {
+  if (changedCount === 0) return `Tiada perubahan baharu untuk Semester ${semester}.`;
+  return `${changedCount} kelas disimpan untuk Semester ${semester} pada ${savedAt}.`;
+}
+
 export function revisionsMatch(current: Record<string, number>, recovered: Record<string, number>) {
   const currentIds = Object.keys(current).sort();
   const recoveredIds = Object.keys(recovered).sort();

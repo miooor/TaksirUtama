@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   emptySubjectEntryValues,
   fillSubjectEntryBlanks,
+  pbdSemesterSwitchMessage,
+  pbdSubjectSaveFeedback,
   revisionsMatch,
   selectSubjectForEntry,
   subjectEntryBalance,
@@ -48,5 +50,11 @@ describe("subject PBD entry workflow", () => {
     expect(selectSubjectForEntry(["subject-a", "subject-b"], "subject-b", undefined, assignments)).toBe("subject-b");
     expect(selectSubjectForEntry(["subject-a", "subject-b"], "missing", "class-a", assignments)).toBe("subject-b");
     expect(selectSubjectForEntry(["subject-a", "subject-b"], "missing", "missing", assignments)).toBe("subject-a");
+  });
+
+  it("names the active semester in switching and save feedback", () => {
+    expect(pbdSemesterSwitchMessage("1", "2")).toBe("Perubahan Semester 1 belum disimpan. Tukar ke Semester 2?");
+    expect(pbdSubjectSaveFeedback(5, "1", "3:42 petang")).toBe("5 kelas disimpan untuk Semester 1 pada 3:42 petang.");
+    expect(pbdSubjectSaveFeedback(0, "2", "3:42 petang")).toBe("Tiada perubahan baharu untuk Semester 2.");
   });
 });

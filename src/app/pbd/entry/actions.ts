@@ -15,7 +15,7 @@ import {
   updateDatabasePbdClassEnrollment,
 } from "@/lib/db/pbd";
 
-export type PbdActionState = { error?: string; success?: string; changedCount?: number; savedAt?: string };
+export type PbdActionState = { error?: string; success?: string; changedCount?: number; savedAt?: string; semester?: "1" | "2" };
 
 function message(error: unknown) {
   if (error && typeof error === "object" && "code" in error) {
@@ -120,10 +120,12 @@ export async function savePbdSubjectEntriesAction(_: PbdActionState, formData: F
     refresh();
     const intent = formData.get("intent");
     const changedCount = result.filter((row) => row.changed).length;
+    const semester = formData.get("semester") === "2" ? "2" : "1";
     return {
       success: intent === "finalize" ? "Semua draf subjek disimpan dan kelas dihantar." : intent === "reopen" ? "Semua draf subjek disimpan dan kelas dibuka semula." : "Semua draf subjek disimpan.",
       changedCount,
       savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }),
+      semester,
     };
   } catch (error) {
     const databaseCode = error && typeof error === "object" && "code" in error ? String(error.code) : null;
