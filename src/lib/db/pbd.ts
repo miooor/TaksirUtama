@@ -36,7 +36,12 @@ const subjectInput = z.object({
   name: z.string().trim().min(2).max(100),
 });
 
-const assignmentInput = z.object({ classId: z.string().uuid(), subjectId: z.string().uuid() });
+const assignmentInput = z.object({
+  classId: z.string().uuid(),
+  subjectId: z.string().uuid(),
+  year: z.string().regex(/^\d{4}$/),
+  semester: z.enum(["1", "2"]),
+});
 
 const nullableCount = z.preprocess(
   (value) => value === "" || value === undefined ? null : value,
@@ -165,7 +170,10 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
   const years = await sql`SELECT id FROM academic_years WHERE school_id = ${schoolId} AND year = ${year} LIMIT 1`;
   const yearId = years[0]?.id ? String(years[0].id) : null;
   const periods = yearId ? await sql`SELECT id FROM database_pbd_periods WHERE school_id = ${schoolId} AND academic_year_id = ${yearId} AND semester = ${semester} LIMIT 1` : [];
-  const periodId = periods[0]?.id ? String(periods[0].id) : null;
+  let periodId = periods[0]?.id ? String(periods[0].id) : null;
+  if (yearId && !periodId) {
+    periodId = (await ensureYearAndPeriod(context, year, semester)).periodId;
+  }
   const [classesRaw, subjectsRaw] = await Promise.all([
     yearId ? sql`SELECT id, name, enrolled_count, level_kind, level_number FROM school_classes WHERE school_id = ${schoolId} AND academic_year_id = ${yearId} AND active = true ORDER BY level_kind, level_number, name` : Promise.resolve([]),
     sql`SELECT id, code, name FROM school_subjects WHERE school_id = ${schoolId} AND active = true ORDER BY name`,
@@ -220,6 +228,7 @@ export async function assignDatabasePbdSubject(context: ActorContext, raw: unkno
     WHERE c.id = ${input.classId} AND c.school_id = ${schoolId} AND s.id = ${input.subjectId} AND s.school_id = ${schoolId}
   `;
   if (!valid.length) throw new Error("Kelas atau subjek tidak ditemui.");
+  await ensureYearAndPeriod(context, input.year, input.semester);
   await sql`INSERT INTO class_subjects (id, school_id, class_id, subject_id) VALUES (${randomUUID()}, ${schoolId}, ${input.classId}, ${input.subjectId}) ON CONFLICT (school_id, class_id, subject_id) DO NOTHING`;
 }
 

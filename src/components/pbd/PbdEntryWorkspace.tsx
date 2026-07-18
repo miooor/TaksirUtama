@@ -46,11 +46,13 @@ function AddSubjectForm() {
   );
 }
 
-function AssignSubjectForm({ setup }: { setup: DatabasePbdSetup }) {
+function AssignSubjectForm({ setup, year, semester }: { setup: DatabasePbdSetup; year: string; semester: "1" | "2" }) {
   const [state, action, pending] = useActionState(assignPbdSubjectAction, initialState);
   if (!setup.classes.length || !setup.subjects.length) return <p className="text-sm text-slate-600">Tambah sekurang-kurangnya satu kelas dan satu subjek dahulu.</p>;
   return (
     <form action={action} className="grid gap-3 rounded-lg bg-stone-50 p-4 sm:grid-cols-[1fr_1fr_auto]">
+      <input type="hidden" name="year" value={year} />
+      <input type="hidden" name="semester" value={semester} />
       <label className="text-sm font-medium">Kelas<select name="classId" className="mt-1 w-full rounded-md border bg-white px-3 py-2">{setup.classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label className="text-sm font-medium">Subjek<select name="subjectId" className="mt-1 w-full rounded-md border bg-white px-3 py-2">{setup.subjects.map((item) => <option key={item.id} value={item.id}>{item.code} - {item.name}</option>)}</select></label>
       <button disabled={pending} className="self-end rounded-md border border-teal-800 px-4 py-2 text-sm font-medium text-teal-900 disabled:opacity-60">Tetapkan</button>
@@ -96,7 +98,7 @@ export function PbdEntryWorkspace({ setup, year, semester }: { setup: DatabasePb
       </section>
       <section>
         <h2 className="text-lg font-semibold">3. Tetapkan subjek kepada kelas</h2>
-        <div className="mt-3"><AssignSubjectForm setup={setup} /></div>
+        <div className="mt-3"><AssignSubjectForm setup={setup} year={year} semester={semester} /></div>
       </section>
       <section className="overflow-hidden rounded-lg border bg-white">
         <div className="border-b px-5 py-4"><h2 className="text-lg font-semibold">4. Isi rumusan TP</h2><p className="mt-1 text-sm text-slate-600">Simpan draf semasa mengisi. Muktamadkan hanya apabila jumlah TP dan murid belum ditaksir sepadan dengan jumlah murid.</p></div>
