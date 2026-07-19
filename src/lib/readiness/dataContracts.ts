@@ -22,7 +22,9 @@ function findHeader(values: unknown[][], label: string) {
 export function validateWorkbookConfig(
   values: unknown[][] | null,
   expectedSchoolCode: string,
-  expectedType: "assessment" | "pbd",
+  expectedType: "upsa" | "uasa" | "pbd",
+  expectedYear?: string,
+  expectedSemester?: "1" | "2",
 ): DataContractFinding[] {
   if (!values) {
     return [{ severity: "fatal", code: "config_missing", location: "_CONFIG", message: "Tab _CONFIG tidak ditemui.", action: "Salin tab _CONFIG daripada templat rasmi." }];
@@ -32,6 +34,8 @@ export function validateWorkbookConfig(
   if (entries.get("SCHEMAVERSION") !== "1") findings.push({ severity: "fatal", code: "schema_version", location: "_CONFIG", message: "Versi skema tidak disokong.", action: "Gunakan templat versi 1." });
   if (normalized(entries.get("SCHOOLCODE")) !== normalized(expectedSchoolCode)) findings.push({ severity: "fatal", code: "school_code", location: "_CONFIG", message: "Kod sekolah tidak sepadan dengan sesi semasa.", action: "Betulkan schoolCode dalam tab _CONFIG." });
   if (normalized(entries.get("WORKBOOKTYPE")) !== normalized(expectedType)) findings.push({ severity: "fatal", code: "workbook_type", location: "_CONFIG", message: "Jenis buku kerja tidak sepadan.", action: `Tetapkan workbookType kepada ${expectedType}.` });
+  if (expectedYear !== undefined && entries.get("YEAR") !== expectedYear) findings.push({ severity: "fatal", code: "year_mismatch", location: "_CONFIG", message: `Tahun tidak sepadan. Dijangka ${expectedYear}.`, action: `Tetapkan year kepada ${expectedYear}.` });
+  if (expectedSemester !== undefined && entries.get("SEMESTER") !== expectedSemester) findings.push({ severity: "fatal", code: "semester_mismatch", location: "_CONFIG", message: `Semester tidak sepadan. Dijangka ${expectedSemester}.`, action: `Tetapkan semester kepada ${expectedSemester}.` });
   return findings;
 }
 
@@ -40,7 +44,7 @@ export function validateAssessmentClassSheet(values: unknown[][], tabName: strin
   if (bil.row < 0) return [{ severity: "fatal", code: "assessment_header", location: tabName, message: "Header BIL tidak ditemui.", action: "Gunakan susun atur templat pentaksiran rasmi." }];
   const header = values[bil.row] ?? [];
   const findings: DataContractFinding[] = [];
-  if (normalized(header[bil.column + 1]) !== "NAMA") findings.push({ severity: "fatal", code: "student_name", location: `${tabName}!R${bil.row + 1}`, message: "Kolum NAMA mesti berada selepas BIL.", action: "Betulkan header murid mengikut templat." });
+  if (!["NAMA", "SUBJEK"].includes(normalized(header[bil.column + 1]))) findings.push({ severity: "fatal", code: "student_name", location: `${tabName}!R${bil.row + 1}`, message: "Kolum NAMA atau SUBJEK mesti berada selepas BIL.", action: "Betulkan header murid mengikut templat." });
   const subjectHeaders = header.slice(bil.column + 2);
   if (!subjectHeaders.some((cell) => normalized(cell) && normalized(cell) !== "GRED")) findings.push({ severity: "fatal", code: "subjects_missing", location: `${tabName}!R${bil.row + 1}`, message: "Tiada subjek ditemui.", action: "Tambah pasangan kolum subjek dan GRED." });
   for (let index = bil.column + 2; index < header.length; index += 2) {

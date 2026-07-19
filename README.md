@@ -26,7 +26,8 @@ Keep the private registry and credentials in an approved password manager. Never
 
 ## Workbook templates
 
-- [UPSA/UASA template](/templates/templat-upsa-uasa-v1.xlsx)
+- [UPSA template](/templates/templat-upsa-v1.xlsx)
+- [UASA template](/templates/templat-uasa-v1.xlsx)
 - [PBD template](/templates/templat-pbd-v1.xlsx)
 
 Change `schoolCode` in each workbook's `_CONFIG` tab before onboarding. Share private workbooks read-only with `GOOGLE_SERVICE_ACCOUNT_EMAIL`.
@@ -69,3 +70,14 @@ The self-service workflow is available at `/settings/data-sources`. Only School 
 Create alerts for authentication spikes, Google API errors, export failures, fatal readiness checks, and p95 route latency above the acceptance targets. After every production deployment, check Vercel runtime errors and Sentry before promotion. The GitHub Actions workflow runs lint, TypeScript, tenant tests, a high-severity dependency audit, and a production build.
 
 The operating baseline for pupil information, support access, retention, incidents, and offboarding is in [docs/PDPA-OPERATING-POLICY.md](docs/PDPA-OPERATING-POLICY.md).
+
+## Database-native PBD proof of concept
+
+New schools can enter aggregate PBD TP data without creating or sharing a workbook. This proof of concept stores class-subject totals only; it does not store pupil-level TP records.
+
+1. Provision Neon and set `DATABASE_URL` alongside the existing school registry and session secret.
+2. Run `npm run db:migrate`. The command applies every numbered SQL migration in `database/`.
+3. Import the school registry with `npm run db:import-schools`. For a direct-entry-only pilot that keeps Google workbook IDs out of Neon, use `npm run db:import-schools -- --metadata-only`.
+4. Sign in as the school pilot administrator, open `/pbd/entry`, then add classes, subjects, class-subject assignments, and PBD TP summaries.
+
+Adding the first database class switches that school to the database PBD provider. The existing Google Sheets provider remains active for every school that has not made this explicit migration. A final PBD entry must reconcile TP1-TP6 plus pupils not assessed to the recorded class enrolment.

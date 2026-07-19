@@ -1,0 +1,11 @@
+.env*
+!.env.example
+
+schools.private.json
+*.school-private.json
+*.school-credentials.json
+*.school-prepared.json
+*.school-onboarding-report.json
+
+.reasonix/
+reasonix.toml

@@ -4,7 +4,7 @@ export class DataSourceError extends Error {
   constructor(
     public readonly code: DataSourceIssueCode,
     message: string,
-    public readonly source: "assessment" | "pbd",
+    public readonly source: "upsa" | "uasa" | "pbd",
   ) {
     super(message);
     this.name = "DataSourceError";

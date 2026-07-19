@@ -4,6 +4,7 @@ import {
   parseAssessmentPeriods,
   parsePbdPeriods,
   resolveAssessmentPeriod,
+  resolvePbdPeriod,
 } from "@/lib/config/periods";
 
 const assessmentPeriods = JSON.stringify([
@@ -56,11 +57,20 @@ describe("period config", () => {
     expect(resolveAssessmentPeriod(periods, "2028", "upsa")).toBeNull();
   });
 
-  it("parses PBD periods", () => {
+  it("parses PBD periods and allows same year with different semesters", () => {
     const periods = parsePbdPeriods(JSON.stringify([
-      { year: "2026", spreadsheetId: "pbd-2026", reportName: "PBD 2026", enabled: true, default: true },
-      { year: "2027", spreadsheetId: "pbd-2027", reportName: "PBD 2027", enabled: true },
+      { year: "2026", semester: "1", spreadsheetId: "pbd-s1", reportName: "PBD Pertengahan 2026", enabled: true, default: true },
+      { year: "2026", semester: "2", spreadsheetId: "pbd-s2", reportName: "PBD Akhir 2026", enabled: true },
     ]));
-    expect(periods.map((period) => period.year)).toEqual(["2026", "2027"]);
+    expect(periods.map((period) => `${period.year}:${period.semester}`)).toEqual(["2026:1", "2026:2"]);
+    expect(resolvePbdPeriod(periods, "2026", "1")?.spreadsheetId).toBe("pbd-s1");
+    expect(resolvePbdPeriod(periods, "2026", "2")?.spreadsheetId).toBe("pbd-s2");
+  });
+
+  it("rejects duplicate PBD year+semester", () => {
+    expect(() => parsePbdPeriods(JSON.stringify([
+      { year: "2026", semester: "1", spreadsheetId: "a", reportName: "A", enabled: true, default: true },
+      { year: "2026", semester: "1", spreadsheetId: "b", reportName: "B", enabled: true },
+    ]))).toThrow(/duplicate/);
   });
 });

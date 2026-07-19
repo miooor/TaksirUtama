@@ -14,7 +14,16 @@ function hrefForYear(pathname: string, searchParams: { toString(): string }, yea
     return pathname.replace(/^\/assessments\/\d{4}\//, `/assessments/${year}/`);
   }
   if (pathname.startsWith("/pbd/periods/")) {
-    return pathname.replace(/^\/pbd\/periods\/\d{4}/, `/pbd/periods/${year}`);
+    const params = new URLSearchParams(searchParams.toString());
+    const query = params.toString();
+    const nextPath = pathname.replace(/^\/pbd\/periods\/\d{4}/, `/pbd/periods/${year}`);
+    return query ? `${nextPath}?${query}` : nextPath;
+  }
+  if (pathname === "/pbd/entry" || pathname === "/pbd/setup" || pathname === "/pbd/interventions/entry" || pathname === "/school/setup") {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("year", year);
+    params.delete("classId");
+    return `${pathname}?${params.toString()}`;
   }
   if (pathname.startsWith("/upsa")) {
     return `/assessments/${year}/upsa/classes`;
@@ -23,7 +32,9 @@ function hrefForYear(pathname: string, searchParams: { toString(): string }, yea
     return uasaReadyYears.includes(year) ? `/assessments/${year}/uasa/classes` : `/uasa?year=${year}`;
   }
   if (pathname.startsWith("/pbd")) {
-    return `/pbd/periods/${year}`;
+    const params = new URLSearchParams(searchParams.toString());
+    const semester = params.get("semester") === "2" ? "2" : "1";
+    return `/pbd/periods/${year}?semester=${semester}`;
   }
 
   const params = new URLSearchParams(searchParams.toString());

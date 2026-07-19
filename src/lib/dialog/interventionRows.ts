@@ -1,4 +1,4 @@
-import { summarizeInterventionPupils } from "@/lib/pbd/intervention";
+import { interventionPupilKey, summarizeInterventionPupils } from "@/lib/pbd/intervention";
 import { classifyInterventionTheme, nextActionForInterventionTheme, ownerForInterventionTheme } from "@/lib/dialog/interventionTheme";
 import type { DialogInterventionRow } from "@/types/dialog";
 import type { PbdInterventionEntry } from "@/types/intervention";
@@ -9,7 +9,7 @@ export function buildDialogInterventionRows(entries: PbdInterventionEntry[]): Di
 
   return entries
     .map((entry) => {
-      const key = `${entry.normalizedStudentName}|${entry.normalizedClassName}`;
+      const key = interventionPupilKey(entry);
       const pupil = pupilByKey.get(key);
       if (!pupil) return null;
       const theme = classifyInterventionTheme(entry.problem, entry.intervention);

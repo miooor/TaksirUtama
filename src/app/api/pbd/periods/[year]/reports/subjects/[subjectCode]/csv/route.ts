@@ -1,12 +1,12 @@
 import { calculatePbdSubjectAnalysis } from "@/lib/pbd/analysis";
 import { getPbdSubjectRecords } from "@/lib/pbd/data";
 import { toCsv } from "@/lib/csv";
-import { getPbdPageContext } from "@/lib/pbdPages";
+import { getPbdPageContext, pbdSemesterFromRequest } from "@/lib/pbdPages";
 import { schoolReportFilename } from "@/lib/reportFilename";
 
-export async function GET(_: Request, { params }: { params: Promise<{ year: string; subjectCode: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ year: string; subjectCode: string }> }) {
   const { subjectCode } = await params;
-  const { school, period } = await getPbdPageContext(params);
+  const { school, period } = await getPbdPageContext(params, pbdSemesterFromRequest(request));
   const analysis = calculatePbdSubjectAnalysis(subjectCode, await getPbdSubjectRecords(school, period, subjectCode));
   const csv = toCsv(analysis.records.map((record) => ({
     Kelas: record.className,
@@ -21,5 +21,5 @@ export async function GET(_: Request, { params }: { params: Promise<{ year: stri
     "Belum Ditaksir": record.notAssessedCount,
     "Isu Data": record.dataIssues.join("; "),
   })));
-  return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${schoolReportFilename(school, `${analysis.subjectCode} - LAPORAN PBD ${period.year}.csv`)}"` } });
+  return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${schoolReportFilename(school, `${analysis.subjectCode} - LAPORAN PBD SEMESTER ${period.semester} ${period.year}.csv`)}"` } });
 }

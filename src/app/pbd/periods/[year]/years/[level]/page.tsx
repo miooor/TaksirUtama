@@ -8,24 +8,25 @@ import { StackedBarChart } from "@/components/shared/StackedBarChart";
 import { calculatePbdYearAnalysis } from "@/lib/pbd/analysis";
 import { getAllPbdRecords } from "@/lib/pbd/data";
 import { getLanguage, text } from "@/lib/i18n";
-import { getPbdPageContext, pbdApiBasePath, pbdBasePath } from "@/lib/pbdPages";
+import { getPbdPageContext, pbdApiBasePath, pbdBasePath, pbdSemesterHref } from "@/lib/pbdPages";
 
-export default async function PbdPeriodYearPage({ params }: { params: Promise<{ year: string; level: string }> }) {
+export default async function PbdPeriodYearPage({ params, searchParams }: { params: Promise<{ year: string; level: string }>; searchParams: Promise<{ semester?: string }> }) {
   const { level } = await params;
-  const { school, period } = await getPbdPageContext(params);
+  const query = await searchParams;
+  const { school, period, semester } = await getPbdPageContext(params, query.semester);
   const analysis = calculatePbdYearAnalysis(Number(level), await getAllPbdRecords(school, period));
   const language = await getLanguage();
   return (
     <AppShell>
       <PageHeader
-        eyebrow={`PBD ${period.year}`}
+        eyebrow={`Semester ${semester} · ${period.year}`}
         title={`${text(language, { ms: "Tahun", en: "Year" })} ${analysis.year}`}
         icon={CalendarRange}
         actions={
           <>
-            <Link href={`${pbdBasePath(period)}/years`} className="rounded-md border px-3 py-2">{text(language, { ms: "Semua tahun", en: "All years" })}</Link>
-            <a href={`${pbdApiBasePath(period)}/reports/years/${analysis.year}/csv`} className="rounded-md border px-3 py-2">{text(language, { ms: "Muat turun CSV", en: "Download CSV" })}</a>
-            <a href={`${pbdApiBasePath(period)}/reports/years/${analysis.year}/pdf`} className="action-accent">{text(language, { ms: "Muat turun PDF", en: "Download PDF" })}</a>
+            <Link href={pbdSemesterHref(`${pbdBasePath(period)}/years`, semester)} className="rounded-md border px-3 py-2">{text(language, { ms: "Semua tahun", en: "All years" })}</Link>
+            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/years/${analysis.year}/csv`, semester)} className="rounded-md border px-3 py-2">{text(language, { ms: "Muat turun CSV", en: "Download CSV" })}</a>
+            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/years/${analysis.year}/pdf`, semester)} className="action-accent">{text(language, { ms: "Muat turun PDF", en: "Download PDF" })}</a>
           </>
         }
       />

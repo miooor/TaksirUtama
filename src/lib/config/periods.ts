@@ -16,6 +16,7 @@ export type AssessmentPeriod = {
 
 export type PbdPeriod = {
   year: string;
+  semester?: "1" | "2";
   spreadsheetId: string;
   reportName: string;
   enabled: boolean;
@@ -36,6 +37,7 @@ const assessmentPeriodSchema = z.object({
 
 const pbdPeriodSchema = z.object({
   year: z.string().regex(/^\d{4}$/),
+  semester: z.enum(["1", "2"]).optional(),
   spreadsheetId: z.string().default(""),
   reportName: z.string().min(1),
   enabled: z.boolean().default(true),
@@ -87,12 +89,13 @@ export function parseAssessmentPeriods(value: string): AssessmentPeriod[] {
 export function parsePbdPeriods(value: string): PbdPeriod[] {
   const periods = z.array(pbdPeriodSchema).parse(parseJsonArray(value, "PBD_PERIODS"));
   ensureSingleDefault(periods, "PBD_PERIODS");
-  const years = new Set<string>();
+  const keys = new Set<string>();
   for (const period of periods) {
-    if (years.has(period.year)) {
-      throw new Error(`PBD_PERIODS contains duplicate year ${period.year}.`);
+    const key = `${period.year}:${period.semester ?? ""}`;
+    if (keys.has(key)) {
+      throw new Error(`PBD_PERIODS contains duplicate year${period.semester ? ` semester ${period.semester}` : ""}: ${period.year}.`);
     }
-    years.add(period.year);
+    keys.add(key);
   }
   return periods;
 }
@@ -115,8 +118,19 @@ export function getDefaultPbdPeriod(periods: PbdPeriod[]) {
   return periods.find((period) => period.enabled && period.default) ?? periods.find((period) => period.enabled) ?? null;
 }
 
-export function resolvePbdPeriod(periods: PbdPeriod[], year: string) {
-  return periods.find((period) => period.enabled && period.year === year) ?? null;
+export function resolvePbdPeriod(periods: PbdPeriod[], year: string, semester?: PbdPeriod["semester"]) {
+  const matching = periods.filter((period) => period.enabled && period.year === year);
+  if (semester) {
+    // A legacy unsemestered period remains a valid fallback, but a configured
+    // semester-specific workbook must always win for its matching semester.
+    return matching.find((period) => period.semester === semester)
+      ?? matching.find((period) => period.semester === undefined)
+      ?? null;
+  }
+  return matching.find((period) => period.default)
+    ?? matching.find((period) => period.semester === undefined)
+    ?? matching[0]
+    ?? null;
 }
 
 export function listPeriodYears(assessmentPeriods: AssessmentPeriod[], pbdPeriods: PbdPeriod[]) {

@@ -9,9 +9,15 @@ import { getAllPbdInterventions } from "@/lib/pbd/data";
 import { buildDialogInterventionRows } from "@/lib/dialog/interventionRows";
 import { requireSchoolContext } from "@/lib/auth";
 import { getLanguage, text } from "@/lib/i18n";
+import { interventionPupilKey } from "@/lib/pbd/intervention";
+import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
 
 type SearchParams = {
   year?: string;
+  semester?: string;
+  level?: string;
+  classId?: string;
+  subjectId?: string;
   class?: string;
   className?: string;
   subject?: string;
@@ -24,28 +30,33 @@ export default async function InterventionPage({
 }) {
   const language = await getLanguage();
   const school = await requireSchoolContext();
-  const { year, subject } = await searchParams;
   const params = await searchParams;
+  const { year, semester, level, period } = resolveInterventionQueryContext(school, params);
+  const subject = params.subject;
   const className = params.className ?? params.class;
-  const { entries, issues } = await getAllPbdInterventions(school, school.defaultPbdPeriod!);
+  const { entries, issues } = await getAllPbdInterventions(school, period);
 
   const years = [...new Set(entries.map((entry) => entry.year))].sort((a, b) => a - b);
   const classes = [...new Set(entries.map((entry) => entry.className))].sort((a, b) => a.localeCompare(b, "ms"));
   const subjects = [...new Set(entries.map((entry) => entry.subjectCode))].sort((a, b) => a.localeCompare(b, "ms"));
 
   const filteredEntries = entries.filter((entry) => {
-    if (year && entry.year !== Number(year)) return false;
-    if (className && entry.className !== className) return false;
-    if (subject && entry.subjectCode !== subject) return false;
+    if (level && entry.year !== level) return false;
+    if (params.classId ? entry.classId !== params.classId : className && entry.className !== className) return false;
+    if (params.subjectId ? entry.subjectId !== params.subjectId : subject && entry.subjectCode !== subject) return false;
     return true;
   });
   const analysis = calculateInterventionDashboardAnalysis(filteredEntries);
   const dialogRows = buildDialogInterventionRows(filteredEntries);
-  const dialogRowByEntry = new Map(dialogRows.map((row) => [`${row.studentName}|${row.className}|${row.subjectCode}`, row]));
+  const dialogRowByEntry = new Map(dialogRows.map((row) => [`${row.pupil.key}|${row.subjectCode}`, row]));
   const themes = [...new Set(dialogRows.map((row) => row.theme))].sort((a, b) => a.localeCompare(b, "ms"));
   const owners = [...new Set(dialogRows.map((row) => row.owner))].sort((a, b) => a.localeCompare(b, "ms"));
   const csvParams = new URLSearchParams();
-  if (year) csvParams.set("year", year);
+  csvParams.set("year", year);
+  csvParams.set("semester", semester);
+  if (level) csvParams.set("level", String(level));
+  if (params.classId) csvParams.set("classId", params.classId);
+  if (params.subjectId) csvParams.set("subjectId", params.subjectId);
   if (className) csvParams.set("className", className);
   if (subject) csvParams.set("subject", subject);
   const csvHref = `/api/intervensi/csv${csvParams.size ? `?${csvParams.toString()}` : ""}`;
@@ -58,45 +69,40 @@ export default async function InterventionPage({
           ms: "Murid yang memerlukan pengukuhan merentas subjek",
           en: "Pupils needing reinforcement across subjects",
         })}
-        description={text(language, {
-          ms: "Kenal pasti murid yang berulang merentas subjek, bandingkan isu yang direkodkan, dan utamakan tindakan bersama.",
-          en: "Identify pupils repeated across subjects, compare the recorded issues, and prioritize coordinated action.",
-        })}
+        description={`Semester ${semester} · ${year} · ${text(language, { ms: "Kenal pasti murid berulang merentas subjek dan utamakan tindakan bersama.", en: "Identify pupils repeated across subjects and prioritize coordinated action." })}`}
         icon={HeartHandshake}
         actions={
-          <Link href={csvHref} className="action-primary inline-flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            CSV
-          </Link>
+          <><Link href={`/pbd/interventions/entry?year=${year}&semester=${semester}`} className="rounded-md border border-stone-300 px-3 py-2 font-medium">Isi Intervensi</Link><Link href={csvHref} className="action-primary inline-flex items-center gap-2"><Download className="h-4 w-4" />CSV</Link></>
         }
       />
 
       <form className="mt-6 grid gap-3 rounded-lg border bg-white p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
         <label className="grid gap-1 text-sm">
           <span className="text-slate-500">{text(language, { ms: "Tahun", en: "Year" })}</span>
-          <select name="year" defaultValue={year ?? ""} className="rounded-md border bg-white px-3 py-2">
+          <input type="hidden" name="year" value={year} /><input type="hidden" name="semester" value={semester} />
+          <select name="level" defaultValue={level ?? ""} className="rounded-md border bg-white px-3 py-2">
             <option value="">{text(language, { ms: "Semua tahun", en: "All years" })}</option>
             {years.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
           <span className="text-slate-500">{text(language, { ms: "Kelas", en: "Class" })}</span>
-          <select name="className" defaultValue={className ?? ""} className="rounded-md border bg-white px-3 py-2">
+          <select name="classId" defaultValue={params.classId ?? className ?? ""} className="rounded-md border bg-white px-3 py-2">
             <option value="">{text(language, { ms: "Semua kelas", en: "All classes" })}</option>
-            {classes.map((item) => <option key={item} value={item}>{item}</option>)}
+            {classes.map((item) => { const id = entries.find((entry) => entry.className === item)?.classId; return <option key={item} value={id ?? item}>{item}</option>; })}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
           <span className="text-slate-500">{text(language, { ms: "Subjek", en: "Subject" })}</span>
-          <select name="subject" defaultValue={subject ?? ""} className="rounded-md border bg-white px-3 py-2">
+          <select name="subjectId" defaultValue={params.subjectId ?? subject ?? ""} className="rounded-md border bg-white px-3 py-2">
             <option value="">{text(language, { ms: "Semua subjek", en: "All subjects" })}</option>
-            {subjects.map((item) => <option key={item} value={item}>{item}</option>)}
+            {subjects.map((item) => { const id = entries.find((entry) => entry.subjectCode === item)?.subjectId; return <option key={item} value={id ?? item}>{item}</option>; })}
           </select>
         </label>
         <div className="flex items-end gap-2">
           <button className="action-primary w-full md:w-auto">{text(language, { ms: "Tapis", en: "Filter" })}</button>
-          {(year || className || subject) ? (
-            <Link href="/intervensi" className="rounded-md border px-3 py-2 text-sm">
+          {(level || params.classId || className || params.subjectId || subject) ? (
+            <Link href={`/intervensi?year=${year}&semester=${semester}`} className="rounded-md border px-3 py-2 text-sm">
               {text(language, { ms: "Reset", en: "Reset" })}
             </Link>
           ) : null}
@@ -253,7 +259,7 @@ export default async function InterventionPage({
                     {pupil.entries.map((entry) => (
                       <article key={`${pupil.key}-${entry.subjectCode}`} className="rounded-md border bg-white p-4">
                         {(() => {
-                          const dialogRow = dialogRowByEntry.get(`${entry.studentName}|${entry.className}|${entry.subjectCode}`);
+                          const dialogRow = dialogRowByEntry.get(`${interventionPupilKey(entry)}|${entry.subjectCode}`);
                           return (
                             <>
                         <div className="flex flex-wrap items-center gap-2">

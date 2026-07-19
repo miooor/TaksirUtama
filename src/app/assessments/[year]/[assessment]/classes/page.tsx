@@ -33,6 +33,8 @@ export default async function AssessmentClassesPage({ params }: { params: Promis
         icon={UsersRound}
       />
 
+      {!results.length ? <section className="mt-6 rounded-lg bg-white p-5"><h2 className="font-semibold">Daftar murid sekolah</h2><p className="mt-2 text-sm text-slate-600">Sediakan roster pusat sekarang supaya rekod murid boleh dipadankan apabila aliran pangkalan data {label} dibuka.</p><Link href={`/school/setup?year=${period.year}&view=pupils`} className="mt-4 inline-block text-sm font-medium text-teal-900">Buka Murid dalam Setup Sekolah</Link></section> : null}
+
       <div className="mt-6 space-y-6">
         {[...grouped.entries()].map(([level, levelClasses]) => (
           <section key={level}>
@@ -45,13 +47,22 @@ export default async function AssessmentClassesPage({ params }: { params: Promis
             </div>
             <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {levelClasses.map((result) => (
-                <article key={result.className} className="rounded-lg border bg-white p-5">
+                <article key={result.className} className="flex h-full flex-col rounded-lg border bg-white p-5">
                   <div className="flex items-center gap-3">
                     <UsersRound className="h-5 w-5 text-teal-700" />
                     <h3 className="text-lg font-semibold">{result.className}</h3>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500">{result.teacherName}</p>
-                  <p className="mt-4 text-sm text-slate-600">{result.students.length} {text(language, { ms: "murid", en: "pupils" })}</p>
+                  <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 text-sm">
+                    <dt className="text-slate-500">{text(language, { ms: "Pentaksiran", en: "Assessment" })}</dt>
+                    <dd>{result.assessmentName || label}</dd>
+                    <dt className="text-slate-500">{text(language, { ms: "Kod sekolah", en: "School code" })}</dt>
+                    <dd>{result.schoolCode || school.code}</dd>
+                    <dt className="text-slate-500">{text(language, { ms: "Guru kelas", en: "Class teacher" })}</dt>
+                    <dd className="min-h-10">{result.teacherName}</dd>
+                    <dt className="text-slate-500">{text(language, { ms: "Guru besar", en: "Headteacher" })}</dt>
+                    <dd className="min-h-10">{result.headteacherName || school.headteacher.name}</dd>
+                  </dl>
+                  <p className="mt-auto pt-4 text-sm text-slate-600">{result.students.length} {text(language, { ms: "murid", en: "pupils" })}</p>
                   <div className="mt-4 flex gap-2 text-sm">
                     <Link href={assessmentClassPath(period, result.className)} className="rounded-md border px-3 py-2">
                       {text(language, { ms: "Buka kelas", en: "Open class" })}

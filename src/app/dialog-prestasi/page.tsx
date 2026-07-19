@@ -10,6 +10,8 @@ import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
 import { getAllPbdInterventions, listPbdSubjectTabs } from "@/lib/pbd/data";
 import { getAllAssessmentClassResults } from "@/lib/upsa/data";
 import { getLanguage, text } from "@/lib/i18n";
+import { interventionPupilKey } from "@/lib/pbd/intervention";
+import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
 
 const subjectNames: Record<string, string> = {
   BM: "Bahasa Melayu",
@@ -28,7 +30,7 @@ const subjectNames: Record<string, string> = {
   "B.TAMIL": "Bahasa Tamil",
 };
 
-export default async function DialogPrestasiPage({ searchParams }: { searchParams: Promise<{ year?: string; assessment?: string }> }) {
+export default async function DialogPrestasiPage({ searchParams }: { searchParams: Promise<{ year?: string; semester?: string; assessment?: string }> }) {
   const language = await getLanguage();
   const school = await requireSchoolContext();
   const { assessmentPeriods, defaultPbdPeriod, pbdPeriods } = school;
@@ -38,7 +40,8 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
   const assessmentLabel = assessment.toUpperCase();
   const years = listPeriodYears(assessmentPeriods, pbdPeriods);
   const year = requestedYear && years.includes(requestedYear) ? requestedYear : defaultPbdPeriod?.year ?? years[0] ?? "2026";
-  const pbdPeriod = resolvePbdPeriod(pbdPeriods, year);
+  const selection = resolveInterventionQueryContext(school, { year, semester: params.semester });
+  const pbdPeriod = resolvePbdPeriod(pbdPeriods, year) ? selection.period : null;
   const assessmentPeriod = resolveAssessmentPeriod(assessmentPeriods, year, assessment);
 
   if (!pbdPeriod) {
@@ -62,10 +65,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
       <PageHeader
         eyebrow={`DP ${year}`}
         title={text(language, { ms: "Pusat Muat Turun Dialog Prestasi Ketua Panitia", en: "Subject Head Dialog Prestasi Download Centre" })}
-        description={text(language, {
-          ms: "Pilih subjek dan muat turun tiga dokumen lengkap untuk pembentangan Dialog Prestasi.",
-          en: "Choose a subject and download the three documents prepared for Dialog Prestasi.",
-        })}
+        description={`Semester ${selection.semester} · ${text(language, { ms: "Pilih subjek dan muat turun dokumen Dialog Prestasi.", en: "Choose a subject and download the Dialog Prestasi documents." })}`}
         icon={Presentation}
         actions={<StatusBadge tone="success">{sortedSubjects.length} {text(language, { ms: "subjek", en: "subjects" })}</StatusBadge>}
       />
@@ -77,7 +77,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
           return (
             <Link
               key={item}
-              href={`/dialog-prestasi?year=${year}&assessment=${item}`}
+              href={`/dialog-prestasi?year=${year}&semester=${selection.semester}&assessment=${item}`}
               className={`rounded-md px-5 py-2 text-sm font-semibold transition ${selected ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}
             >
               {item.toUpperCase()}
@@ -90,7 +90,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <MetricCard label="Analisa Perbandingan TP" value={sortedSubjects.length} />
         <MetricCard label={`Analisa Perbandingan ${assessmentLabel}`} value={sortedSubjects.filter((code) => resolveAssessmentSubjectCode(code, assessmentCodes)).length} />
-        <MetricCard label="Murid intervensi" value={new Set(interventionData.entries.map((entry) => `${entry.normalizedStudentName}|${entry.normalizedClassName}`)).size} tone="warning" />
+        <MetricCard label="Murid intervensi" value={new Set(interventionData.entries.map(interventionPupilKey)).size} tone="warning" />
       </div>
 
       <section className="mt-6 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
@@ -116,7 +116,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
 
               <div className="mt-5 grid gap-3">
                 <DownloadCard
-                  href={`/api/pbd/periods/${year}/reports/subjects/${encodeURIComponent(subjectCode)}/pdf`}
+                  href={`/api/pbd/periods/${year}/reports/subjects/${encodeURIComponent(subjectCode)}/pdf?semester=${selection.semester}`}
                   icon={BarChart3}
                   title="1. Analisa Perbandingan TP"
                   description="Carta bar dan jadual perbandingan kelas bagi setiap tahun menggunakan data PBD."
@@ -128,7 +128,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
                   description={assessmentSubjectCode && assessmentPeriod ? `Carta dan jadual gred Tahun 4, 5 dan 6 (${assessmentSubjectCode}).` : `Tiada subjek ${assessmentLabel} yang sepadan atau tempoh belum tersedia.`}
                 />
                 <DownloadCard
-                  href={`${base}/intervention`}
+                  href={`${base}/intervention?semester=${selection.semester}`}
                   icon={HeartHandshake}
                   title="3. Intervensi dan Isu"
                   description="Senarai murid TP1 dan TP2, masalah dan intervensi mengikut tahun serta kelas."

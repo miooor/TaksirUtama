@@ -6,6 +6,16 @@ function normalizeCell(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function normalizeLabel(value: unknown) {
+  return normalizeCell(value).toLocaleUpperCase("ms").replace(/[^A-Z0-9]/g, "");
+}
+
+function findMetadataValue(values: unknown[][], label: string) {
+  const target = normalizeLabel(label);
+  const row = values.find((cells) => normalizeLabel(cells[0]) === target);
+  return normalizeCell(row?.[1]);
+}
+
 function isAbsentMark(value: unknown) {
   const normalized = normalizeCell(value).toUpperCase();
   return normalized === "TH" || normalized === "TAK HADIR";
@@ -20,13 +30,14 @@ function toNumber(value: unknown) {
 }
 
 export function parseUpsaClassSheet(values: unknown[][], fallbackClassName: string): UpsaClassResult {
-  const headerIndex = values.findIndex((row) => String(row[0] ?? "").trim().toUpperCase() === "BIL");
+  const headerIndex = values.findIndex((row) => normalizeLabel(row[0]) === "BIL");
   const headerRow = values[headerIndex] ?? [];
   const maxMarkRow = values[headerIndex + 1] ?? [];
-  const classRow = values.find((row) => String(row[0] ?? "").trim().toUpperCase() === "KELAS:");
-  const teacherRow = values.find((row) => String(row[0] ?? "").trim().toUpperCase() === "NAMA GURU KELAS :");
-  const className = String(classRow?.[1] ?? fallbackClassName).trim() || fallbackClassName;
-  const teacherName = String(teacherRow?.[1] ?? "Belum ditetapkan").trim() || "Belum ditetapkan";
+  const assessmentName = findMetadataValue(values, "PENTAKSIRAN");
+  const schoolCode = findMetadataValue(values, "KOD SEKOLAH");
+  const className = findMetadataValue(values, "KELAS") || fallbackClassName;
+  const teacherName = findMetadataValue(values, "NAMA GURU KELAS") || "Belum ditetapkan";
+  const headteacherName = findMetadataValue(values, "NAMA GURU BESAR");
 
   const subjects: Array<{ index: number; code: string; maxMark: number }> = [];
   for (let index = 2; index < headerRow.length; index += 2) {
@@ -72,5 +83,12 @@ export function parseUpsaClassSheet(values: unknown[][], fallbackClassName: stri
     return [student];
   });
 
-  return { className, teacherName, students };
+  return {
+    assessmentName: assessmentName || undefined,
+    schoolCode: schoolCode || undefined,
+    className,
+    teacherName,
+    headteacherName: headteacherName || undefined,
+    students,
+  };
 }

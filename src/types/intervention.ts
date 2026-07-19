@@ -2,7 +2,14 @@ export type InterventionPriority = "high" | "single-subject";
 export type InterventionSeverity = "urgent" | "coordinated" | "monitor";
 
 export type PbdInterventionEntry = {
+  id?: string;
+  studentId?: string;
+  classEnrollmentId?: string;
+  classId?: string;
+  subjectId?: string;
+  classSubjectId?: string;
   subjectCode: string;
+  subjectName?: string;
   studentName: string;
   normalizedStudentName: string;
   className: string;
@@ -11,6 +18,9 @@ export type PbdInterventionEntry = {
   tp: 1 | 2;
   problem: string;
   intervention: string;
+  semester?: "1" | "2";
+  revision?: number;
+  active?: boolean;
 };
 
 export type PbdInterventionIssue = {

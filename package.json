@@ -20,6 +20,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.5.19",
     "@neondatabase/serverless": "^1.1.0",
+    "@radix-ui/react-dialog": "^1.1.19",
     "@react-pdf/renderer": "^4.5.1",
     "@sentry/nextjs": "^10.65.0",
     "@vercel/analytics": "^2.0.1",

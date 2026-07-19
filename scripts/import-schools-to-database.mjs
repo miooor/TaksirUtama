@@ -3,14 +3,16 @@ import { createCipheriv, randomBytes } from "node:crypto";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
 if (!process.env.SCHOOLS_CONFIG) throw new Error("SCHOOLS_CONFIG is required.");
-if (!process.env.WORKBOOK_ENCRYPTION_KEY) throw new Error("WORKBOOK_ENCRYPTION_KEY is required.");
+const metadataOnly = process.argv.includes("--metadata-only");
+if (!metadataOnly && !process.env.WORKBOOK_ENCRYPTION_KEY) throw new Error("WORKBOOK_ENCRYPTION_KEY is required unless --metadata-only is used.");
 const schools = JSON.parse(process.env.SCHOOLS_CONFIG);
 if (!Array.isArray(schools) || !schools.length) throw new Error("SCHOOLS_CONFIG must contain schools.");
 const sql = neon(process.env.DATABASE_URL);
-const encryptionKey = Buffer.from(process.env.WORKBOOK_ENCRYPTION_KEY, "base64url");
-if (encryptionKey.length !== 32) throw new Error("WORKBOOK_ENCRYPTION_KEY must decode to exactly 32 bytes.");
+const encryptionKey = metadataOnly ? null : Buffer.from(process.env.WORKBOOK_ENCRYPTION_KEY, "base64url");
+if (encryptionKey && encryptionKey.length !== 32) throw new Error("WORKBOOK_ENCRYPTION_KEY must decode to exactly 32 bytes.");
 
 function encrypt(value) {
+  if (!encryptionKey) throw new Error("Workbook encryption is not configured.");
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", encryptionKey, iv);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
@@ -18,7 +20,7 @@ function encrypt(value) {
 }
 
 for (const school of schools) {
-  const sources = [
+  const sources = metadataOnly ? [] : [
     ...(school.assessmentPeriods ?? []).map((period) => ({ year: period.year, type: period.assessment, spreadsheetId: period.spreadsheetId })),
     ...(school.pbdPeriods ?? []).map((period) => ({ year: period.year, type: "pbd", spreadsheetId: period.spreadsheetId })),
   ].filter((source) => source.spreadsheetId);
@@ -50,4 +52,4 @@ for (const school of schools) {
     `;
   }
 }
-process.stdout.write(`Imported ${schools.length} school configuration(s).\n`);
+process.stdout.write(`Imported ${schools.length} school configuration(s)${metadataOnly ? " without workbook metadata" : ""}.\n`);

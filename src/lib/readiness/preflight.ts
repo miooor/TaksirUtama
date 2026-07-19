@@ -35,7 +35,7 @@ async function loadSchoolPreflight(school: SchoolContext): Promise<PeriodPreflig
       findings.push({ severity: "fatal", code: "workbook_missing", location: `${period.assessment.toUpperCase()} ${period.year}`, message: "ID buku kerja belum dikonfigurasi.", action: "Tambah spreadsheetId dalam SCHOOLS_CONFIG." });
     } else {
       try {
-        findings.push(...validateWorkbookConfig(await readConfig(period.spreadsheetId), school.code, "assessment"));
+        findings.push(...validateWorkbookConfig(await readConfig(period.spreadsheetId), school.code, period.assessment, period.year));
         const classes = await listAssessmentClassTabs(school, period);
         if (!classes.length) findings.push({ severity: "fatal", code: "class_tabs_missing", location: `${period.assessment.toUpperCase()} ${period.year}`, message: "Tiada tab kelas yang sah ditemui.", action: "Gunakan nama kelas bermula Tahun 1 hingga 6." });
       } catch {
@@ -52,7 +52,7 @@ async function loadSchoolPreflight(school: SchoolContext): Promise<PeriodPreflig
       findings.push({ severity: "fatal", code: "workbook_missing", location: `PBD ${period.year}`, message: "ID buku kerja belum dikonfigurasi.", action: "Tambah spreadsheetId dalam SCHOOLS_CONFIG." });
     } else {
       try {
-        findings.push(...validateWorkbookConfig(await readConfig(period.spreadsheetId), school.code, "pbd"));
+        findings.push(...validateWorkbookConfig(await readConfig(period.spreadsheetId), school.code, "pbd", period.year, period.semester));
         const subjects = await listPbdSubjectTabs(school, period);
         if (!subjects.length) findings.push({ severity: "fatal", code: "subject_tabs_missing", location: `PBD ${period.year}`, message: "Tiada tab subjek ditemui.", action: "Tambah tab subjek daripada templat PBD rasmi." });
       } catch {
