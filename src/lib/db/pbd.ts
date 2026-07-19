@@ -480,7 +480,7 @@ export async function getDatabasePbdRecords(context: ActorContext, year: string,
     const counted = bands.reduce((sum, band) => sum + counts[band], 0) + (entry.notAssessedCount ?? 0);
     return [{
       subjectCode: row.subjectCode, subjectName: row.subjectName, className: row.className,
-      year: Number((row.className.match(/\d+/)?.[0]) ?? 0), tpCounts: counts,
+      year: row.classLevelNumber ?? 0, tpCounts: counts,
       tpPercentages: Object.fromEntries(bands.map((band) => [band, total ? (counts[band] / total) * 100 : 0])) as Record<TpBand, number>,
       totalPupils: total, notAssessedCount: entry.notAssessedCount ?? 0, lowAchievementCount: low,
       lowAchievementPercentage: total ? (low / total) * 100 : 0, highAchievementCount: high,

@@ -4,6 +4,7 @@ import {
   parseAssessmentPeriods,
   parsePbdPeriods,
   resolveAssessmentPeriod,
+  resolvePbdPeriod,
 } from "@/lib/config/periods";
 
 const assessmentPeriods = JSON.stringify([
@@ -62,6 +63,8 @@ describe("period config", () => {
       { year: "2026", semester: "2", spreadsheetId: "pbd-s2", reportName: "PBD Akhir 2026", enabled: true },
     ]));
     expect(periods.map((period) => `${period.year}:${period.semester}`)).toEqual(["2026:1", "2026:2"]);
+    expect(resolvePbdPeriod(periods, "2026", "1")?.spreadsheetId).toBe("pbd-s1");
+    expect(resolvePbdPeriod(periods, "2026", "2")?.spreadsheetId).toBe("pbd-s2");
   });
 
   it("rejects duplicate PBD year+semester", () => {

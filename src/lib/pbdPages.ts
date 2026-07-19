@@ -10,17 +10,18 @@ export type { PbdSemester } from "@/lib/pbd/semester";
 export async function getPbdPageContext(params: Promise<{ year: string }>, requestedSemester?: string | null) {
   const { year } = await params;
   const school = await requireSchoolContext();
-  const configuredPeriod = resolvePbdPeriod(school.pbdPeriods, year);
+  const initialPeriod = resolvePbdPeriod(school.pbdPeriods, year);
+  const semester = resolvePbdSemester(requestedSemester, initialPeriod?.semester);
+  const configuredPeriod = resolvePbdPeriod(school.pbdPeriods, year, semester);
   if (configuredPeriod) {
-    const semester = resolvePbdSemester(requestedSemester, configuredPeriod.semester);
     return { school, period: { ...configuredPeriod, semester }, semester };
   }
   if (!listPeriodYears(school.assessmentPeriods, school.pbdPeriods).includes(year)) {
     notFound();
   }
   const placeholder = createPlaceholderPbdPeriod(year);
-  const semester = resolvePbdSemester(requestedSemester, placeholder.semester);
-  return { school, period: { ...placeholder, semester }, semester };
+  const fallbackSemester = resolvePbdSemester(requestedSemester, placeholder.semester);
+  return { school, period: { ...placeholder, semester: fallbackSemester }, semester: fallbackSemester };
 }
 
 export async function getPbdPagePeriod(params: Promise<{ year: string }>, requestedSemester?: string | null) {

@@ -18,8 +18,9 @@ export function resolveInterventionQueryContext(
   const year = query.year && /^\d{4}$/.test(query.year)
     ? query.year
     : school.defaultPbdPeriod?.year ?? school.pbdPeriods[0]?.year ?? "2026";
-  const configured = resolvePbdPeriod(school.pbdPeriods, year);
+  const initial = resolvePbdPeriod(school.pbdPeriods, year);
+  const semester = resolvePbdSemester(query.semester, initial?.semester ?? school.defaultPbdPeriod?.semester);
+  const configured = resolvePbdPeriod(school.pbdPeriods, year, semester);
   const base = configured ?? createPlaceholderPbdPeriod(year);
-  const semester = resolvePbdSemester(query.semester, base.semester ?? school.defaultPbdPeriod?.semester);
   return { year, semester, level: explicitLevel ?? legacyLevel, period: { ...base, semester } };
 }

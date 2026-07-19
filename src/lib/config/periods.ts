@@ -118,8 +118,19 @@ export function getDefaultPbdPeriod(periods: PbdPeriod[]) {
   return periods.find((period) => period.enabled && period.default) ?? periods.find((period) => period.enabled) ?? null;
 }
 
-export function resolvePbdPeriod(periods: PbdPeriod[], year: string) {
-  return periods.find((period) => period.enabled && period.year === year) ?? null;
+export function resolvePbdPeriod(periods: PbdPeriod[], year: string, semester?: PbdPeriod["semester"]) {
+  const matching = periods.filter((period) => period.enabled && period.year === year);
+  if (semester) {
+    // A legacy unsemestered period remains a valid fallback, but a configured
+    // semester-specific workbook must always win for its matching semester.
+    return matching.find((period) => period.semester === semester)
+      ?? matching.find((period) => period.semester === undefined)
+      ?? null;
+  }
+  return matching.find((period) => period.default)
+    ?? matching.find((period) => period.semester === undefined)
+    ?? matching[0]
+    ?? null;
 }
 
 export function listPeriodYears(assessmentPeriods: AssessmentPeriod[], pbdPeriods: PbdPeriod[]) {

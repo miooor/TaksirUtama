@@ -94,9 +94,20 @@ export function buildRosterImportPreview(
         ? { ...row, classId: targetClass.id, studentId: codeStudent.id, enrollmentId: enrollment.id, status: "match" as const, message: "Sepadan melalui kod murid." }
         : { ...row, classId: targetClass.id, studentId: codeStudent.id, enrollmentId: null, status: "create" as const, message: "Pupil sedia ada akan didaftarkan ke kelas tahun ini." };
     }
-    if (nameMatches.length > 1) return { ...row, classId: targetClass.id, studentId: null, enrollmentId: null, status: "error" as const, message: "Nama sepadan dengan lebih daripada satu murid. Tambah kod murid." };
+    const sameRosterNameMatches = row.rosterNumber === null
+      ? []
+      : nameMatches.filter((item) => item.rosterNumber === row.rosterNumber);
+    if (sameRosterNameMatches.length > 1) return { ...row, classId: targetClass.id, studentId: null, enrollmentId: null, status: "error" as const, message: "Nama dan nombor bil sepadan dengan lebih daripada satu murid. Tambah kod murid." };
+    if (sameRosterNameMatches.length === 1) {
+      const enrollment = sameRosterNameMatches[0]!;
+      return { ...row, classId: targetClass.id, studentId: enrollment.studentId, enrollmentId: enrollment.id, status: "match" as const, message: "Sepadan melalui nama, kelas dan nombor bil." };
+    }
+    if (nameMatches.length > 1) return { ...row, classId: targetClass.id, studentId: null, enrollmentId: null, status: "error" as const, message: "Nama sepadan dengan lebih daripada satu murid. Tambah kod murid atau nombor bil." };
     if (nameMatches.length === 1) {
       const enrollment = nameMatches[0]!;
+      if (row.rosterNumber !== null && enrollment.rosterNumber !== row.rosterNumber) {
+        return { ...row, classId: targetClass.id, studentId: null, enrollmentId: null, status: "create" as const, message: "Nama sama dengan nombor bil berbeza; murid baharu akan ditambah." };
+      }
       return { ...row, classId: targetClass.id, studentId: enrollment.studentId, enrollmentId: enrollment.id, status: "match" as const, message: "Murid telah berada dalam kelas ini." };
     }
     const rosterConflict = row.rosterNumber === null ? null : registry.enrollments.find((item) => item.classId === targetClass.id && item.active && item.rosterNumber === row.rosterNumber);

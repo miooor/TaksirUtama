@@ -43,4 +43,11 @@ describe("school roster import", () => {
     ], [{ id: "class-1", name: "1 Cemerlang", active: true }], registry);
     expect(preview).toMatchObject({ createCount: 2, errorCount: 0 });
   });
+
+  it("creates a second code-less pupil when the roster number differs", () => {
+    const preview = buildRosterImportPreview([
+      { rowNumber: 2, pupilCode: null, displayName: "Ali Ahmad", className: "1 Cemerlang", rosterNumber: 2 },
+    ], [{ id: "class-1", name: "1 Cemerlang", active: true }], registry);
+    expect(preview.rows[0]).toMatchObject({ status: "create", studentId: null });
+  });
 });

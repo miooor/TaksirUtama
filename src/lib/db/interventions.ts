@@ -43,11 +43,11 @@ export async function getDatabasePbdInterventions(
       c.id AS class_id, c.name AS class_name, c.level_number,
       s.id AS subject_id, s.code AS subject_code, s.name AS subject_name
     FROM pbd_student_interventions item
-    JOIN student_class_enrolments enrollment ON enrollment.id = item.class_enrolment_id AND enrollment.school_id = ${schoolId}
-    JOIN school_students st ON st.id = item.student_id AND st.school_id = ${schoolId}
-    JOIN class_subjects cs ON cs.id = item.class_subject_id AND cs.school_id = ${schoolId}
-    JOIN school_classes c ON c.id = cs.class_id AND c.id = enrollment.class_id AND c.school_id = ${schoolId}
-    JOIN school_subjects s ON s.id = cs.subject_id AND s.school_id = ${schoolId}
+    JOIN student_class_enrolments enrollment ON enrollment.id = item.class_enrolment_id AND enrollment.school_id = ${schoolId} AND enrollment.active = true
+    JOIN school_students st ON st.id = item.student_id AND st.school_id = ${schoolId} AND st.active = true
+    JOIN class_subjects cs ON cs.id = item.class_subject_id AND cs.school_id = ${schoolId} AND cs.active = true
+    JOIN school_classes c ON c.id = cs.class_id AND c.id = enrollment.class_id AND c.school_id = ${schoolId} AND c.active = true
+    JOIN school_subjects s ON s.id = cs.subject_id AND s.school_id = ${schoolId} AND s.active = true
     WHERE item.school_id = ${schoolId} AND item.period_id = ${setup.periodId}
     ORDER BY c.level_kind, c.level_number, c.name, s.code, st.display_name
   `;
