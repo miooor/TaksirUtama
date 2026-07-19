@@ -4,8 +4,8 @@ import type {
   PbdInterventionEntry,
 } from "@/types/intervention";
 
-function pupilKey(entry: PbdInterventionEntry) {
-  return `${entry.normalizedStudentName}|${entry.normalizedClassName}`;
+export function interventionPupilKey(entry: PbdInterventionEntry) {
+  return entry.studentId ? `student:${entry.studentId}` : `${entry.normalizedStudentName}|${entry.normalizedClassName}`;
 }
 
 function comparePupils(a: InterventionPupilSummary, b: InterventionPupilSummary) {
@@ -21,7 +21,7 @@ export function summarizeInterventionPupils(entries: PbdInterventionEntry[]): In
   const grouped = new Map<string, PbdInterventionEntry[]>();
 
   for (const entry of entries) {
-    const key = pupilKey(entry);
+    const key = interventionPupilKey(entry);
     grouped.set(key, [...(grouped.get(key) ?? []), entry]);
   }
 

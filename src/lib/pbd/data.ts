@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { hasGoogleCredentials } from "@/lib/config/env";
 import { getActorContext } from "@/lib/auth/actor";
 import { getDatabasePbdRecords, getDatabasePbdSetup, usesDatabasePbdSource } from "@/lib/db/pbd";
+import { getDatabasePbdInterventions } from "@/lib/db/interventions";
 import { isDatabaseConfigured } from "@/lib/db/client";
 import type { SchoolContext } from "@/lib/config/schools";
 import type { PbdPeriod } from "@/lib/config/periods";
@@ -115,7 +116,10 @@ async function loadAllPbdInterventions(school: SchoolContext, period: PbdPeriod)
 export async function getAllPbdInterventions(school: SchoolContext, period: PbdPeriod) {
   if (isDatabaseConfigured() && await usesDatabasePbdSource(school.id)) {
     const context = await getActorContext();
-    if (context?.school.id === school.id) return { entries: [], issues: [] };
+    if (context?.school.id === school.id) {
+      const entries = await getDatabasePbdInterventions(context, period.year, period.semester ?? "1");
+      return { entries: entries.filter((entry) => entry.active !== false), issues: [] };
+    }
   }
   return unstable_cache(
     () => loadAllPbdInterventions(school, period),

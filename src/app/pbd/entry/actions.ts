@@ -28,6 +28,9 @@ function refresh() {
   updateTag("pbd-database");
   revalidatePath("/pbd/entry");
   revalidatePath("/pbd/setup");
+  revalidatePath("/school/setup");
+  revalidatePath("/pbd/interventions/entry");
+  revalidatePath("/intervensi");
   revalidatePath("/dashboard");
   revalidatePath("/pbd/periods/[year]", "page");
 }

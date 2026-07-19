@@ -3,6 +3,15 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("PBD subject workflow migration", () => {
+  it("adds the shared pupil registry and revision-safe intervention functions", () => {
+    const source = readFileSync(resolve(process.cwd(), "database/008_school_registry_interventions.sql"), "utf8");
+    expect(source).toContain("CREATE TABLE IF NOT EXISTS school_students");
+    expect(source).toContain("CREATE TABLE IF NOT EXISTS student_class_enrolments");
+    expect(source).toContain("CREATE TABLE IF NOT EXISTS pbd_student_interventions");
+    expect(source).toContain("CREATE OR REPLACE FUNCTION save_pbd_student_intervention");
+    expect(source).toContain("p_expected_revision");
+  });
+
   it("qualifies the period status column so it cannot collide with the function output", () => {
     const source = readFileSync(resolve(process.cwd(), "database/005_pbd_subject_workflow.sql"), "utf8");
     expect(source).toContain("database_pbd_periods.status IN ('draft', 'open')");

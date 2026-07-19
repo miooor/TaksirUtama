@@ -19,7 +19,7 @@ function hrefForYear(pathname: string, searchParams: { toString(): string }, yea
     const nextPath = pathname.replace(/^\/pbd\/periods\/\d{4}/, `/pbd/periods/${year}`);
     return query ? `${nextPath}?${query}` : nextPath;
   }
-  if (pathname === "/pbd/entry" || pathname === "/pbd/setup") {
+  if (pathname === "/pbd/entry" || pathname === "/pbd/setup" || pathname === "/pbd/interventions/entry" || pathname === "/school/setup") {
     const params = new URLSearchParams(searchParams.toString());
     params.set("year", year);
     params.delete("classId");

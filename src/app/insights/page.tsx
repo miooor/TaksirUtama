@@ -14,10 +14,13 @@ import { buildDialogInsightBriefs, buildDialogInsightOverview, selectDialogInsig
 import { formatNumber, formatPercent } from "@/lib/dialog/format";
 import { getLanguage, text } from "@/lib/i18n";
 import type { DialogInsightBrief, DialogInsightFinding, DialogInsightOverview } from "@/types/dialog";
+import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
 
 type SearchParams = {
   subject?: string;
   year?: string;
+  semester?: string;
+  level?: string;
   className?: string;
 };
 
@@ -64,13 +67,15 @@ export default async function SchoolInsightsPage({
   if (!school.defaultUpsaPeriod || !school.defaultPbdPeriod) {
     throw new DataSourceError("workbook_inaccessible", "UPSA and PBD must be configured before insights are available.", "upsa");
   }
-  const { subject, year, className } = await searchParams;
-  const selectedYear = parseYear(year);
+  const params = await searchParams;
+  const { subject, year, className } = params;
+  const selection = resolveInterventionQueryContext(school, { year, semester: params.semester, level: params.level });
+  const selectedYear = selection.level ?? parseYear(year);
   const selectedClass = className ?? null;
   const [upsaResults, pbdRecords, interventionData] = await Promise.all([
     getAllAssessmentClassResults(school, school.defaultUpsaPeriod),
-    getAllPbdRecords(school, school.defaultPbdPeriod),
-    getAllPbdInterventions(school, school.defaultPbdPeriod),
+    getAllPbdRecords(school, selection.period),
+    getAllPbdInterventions(school, selection.period),
   ]);
   const allBriefs = buildDialogInsightBriefs({
     upsaResults,
@@ -95,18 +100,19 @@ export default async function SchoolInsightsPage({
     .sort((a, b) => a - b);
   const classes = [...new Set([...pbdRecords.map((record) => record.className), ...upsaResults.map((result) => result.className.match(/[1-6]\s+[A-Z]+/)?.[0] ?? result.className)])]
     .sort((a, b) => a.localeCompare(b, "ms"));
+  const contextQuery = `year=${selection.year}&semester=${selection.semester}`;
 
   return (
     <AppShell>
       <PageHeader
         eyebrow="Dapatan Dialog Prestasi"
         title={selectedBrief ? `${selectedBrief.subjectCode}: Briefing Panitia` : "Dapatan semua subjek"}
-        description={selectedBrief
-          ? "Paparan ringkas untuk KP dan admin membincangkan evidence UPSA, PBD dan tindakan intervensi tanpa menyediakan slaid berasingan."
-          : "Ringkasan sekolah untuk membandingkan semua subjek dan semua kelas sebelum memilih subjek panitia."}
+        description={`Semester ${selection.semester} · ${selection.year} · ${selectedBrief
+          ? "Evidence UPSA, PBD dan tindakan intervensi untuk perbincangan panitia."
+          : "Ringkasan sekolah merentas subjek dan kelas."}`}
         icon={Telescope}
         actions={selectedBrief ? (
-          <Link href={selectedBrief.handoffHref} className="action-primary inline-flex items-center gap-2">
+          <Link href={`${selectedBrief.handoffHref}${selectedBrief.handoffHref.includes("?") ? "&" : "?"}${contextQuery}`} className="action-primary inline-flex items-center gap-2">
             Intervensi <ArrowRight className="h-4 w-4" />
           </Link>
         ) : null}
@@ -114,6 +120,8 @@ export default async function SchoolInsightsPage({
 
       <section className="mt-6 grid gap-3 rounded-lg border bg-white p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
         <form className="contents">
+          <input type="hidden" name="year" value={selection.year} />
+          <input type="hidden" name="semester" value={selection.semester} />
           <label className="grid gap-1 text-sm">
             <span className="text-slate-500">Subjek</span>
             <select name="subject" defaultValue={selectedBrief?.subjectCode ?? subject ?? ""} className="rounded-md border bg-white px-3 py-2">
@@ -123,7 +131,7 @@ export default async function SchoolInsightsPage({
           </label>
           <label className="grid gap-1 text-sm">
             <span className="text-slate-500">Tahun</span>
-            <select name="year" defaultValue={selectedYear ?? ""} className="rounded-md border bg-white px-3 py-2">
+            <select name="level" defaultValue={selectedYear ?? ""} className="rounded-md border bg-white px-3 py-2">
               <option value="">Semua tahun</option>
               {years.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
@@ -137,14 +145,14 @@ export default async function SchoolInsightsPage({
           </label>
           <div className="flex items-end gap-2">
             <button className="action-primary w-full md:w-auto">Tapis</button>
-            {(subject || year || className) ? (
-              <Link href="/insights" className="rounded-md border px-3 py-2 text-sm">Reset</Link>
+            {(subject || selectedYear || className) ? (
+              <Link href={`/insights?${contextQuery}`} className="rounded-md border px-3 py-2 text-sm">Reset</Link>
             ) : null}
           </div>
         </form>
       </section>
 
-      {selectedBrief ? <SubjectClassEvidence selectedBrief={selectedBrief} /> : <OverviewSections overview={overview} />}
+      {selectedBrief ? <SubjectClassEvidence selectedBrief={selectedBrief} /> : <OverviewSections overview={overview} contextQuery={contextQuery} />}
 
       {selectedBrief ? (
         <>
@@ -250,7 +258,7 @@ export default async function SchoolInsightsPage({
   );
 }
 
-function OverviewSections({ overview }: { overview: DialogInsightOverview }) {
+function OverviewSections({ overview, contextQuery }: { overview: DialogInsightOverview; contextQuery: string }) {
   const highSubjects = overview.subjectSummaries.filter((summary) => summary.attentionLevel === "Tinggi").length;
   const highClasses = overview.classSummaries.filter((summary) => summary.attentionScore >= 90).length;
 
@@ -284,7 +292,7 @@ function OverviewSections({ overview }: { overview: DialogInsightOverview }) {
                 {summary.upsaApplicable ? `UPSA lulus ${formatPercent(summary.upsaPassPercentage)}, ` : "PBD sahaja, "}PBD TP1+TP2 {formatPercent(summary.pbdLowPercentage)}, PBD TP5+TP6 {formatPercent(summary.pbdHighPercentage)}.
                 {summary.weakestClass ? ` Kelas perhatian: ${summary.weakestClass}.` : ""}
               </p>
-              <Link href={`/insights?subject=${encodeURIComponent(summary.subjectCode)}`} className="action-primary mt-4 inline-flex items-center gap-2">
+              <Link href={`/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`} className="action-primary mt-4 inline-flex items-center gap-2">
                 Buka brief panitia <ArrowRight className="h-4 w-4" />
               </Link>
             </article>
@@ -327,7 +335,7 @@ function OverviewSections({ overview }: { overview: DialogInsightOverview }) {
               { label: "PBD TP1+TP2", value: summary.pbdLowPercentage, display: `${formatPercent(summary.pbdLowPercentage)} (${summary.pbdLowCount})`, tone: "low-good" as const },
               { label: "Perhatian", value: summary.attentionScore, display: String(summary.attentionScore), tone: "attention" as const },
             ],
-            action: { href: `/insights?subject=${encodeURIComponent(summary.subjectCode)}`, label: "Buka brief" },
+            action: { href: `/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`, label: "Buka brief" },
           }))}
         />
         <DialogEvidenceMatrix
@@ -385,7 +393,7 @@ function OverviewSections({ overview }: { overview: DialogInsightOverview }) {
           `${formatPercent(summary.pbdHighPercentage)} (${summary.pbdHighCount})`,
           summary.confidence,
           summary.weakestClass ?? "-",
-          <Link key={`${summary.subjectCode}-brief`} href={`/insights?subject=${encodeURIComponent(summary.subjectCode)}`} className="text-teal-700 underline">Brief</Link>,
+          <Link key={`${summary.subjectCode}-brief`} href={`/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`} className="text-teal-700 underline">Brief</Link>,
         ])}
       />
 

@@ -33,6 +33,8 @@ export default async function AssessmentClassesPage({ params }: { params: Promis
         icon={UsersRound}
       />
 
+      {!results.length ? <section className="mt-6 rounded-lg bg-white p-5"><h2 className="font-semibold">Daftar murid sekolah</h2><p className="mt-2 text-sm text-slate-600">Sediakan roster pusat sekarang supaya rekod murid boleh dipadankan apabila aliran pangkalan data {label} dibuka.</p><Link href={`/school/setup?year=${period.year}&view=pupils`} className="mt-4 inline-block text-sm font-medium text-teal-900">Buka Murid dalam Setup Sekolah</Link></section> : null}
+
       <div className="mt-6 space-y-6">
         {[...grouped.entries()].map(([level, levelClasses]) => (
           <section key={level}>

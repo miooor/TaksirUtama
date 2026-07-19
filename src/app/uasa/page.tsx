@@ -60,6 +60,7 @@ export default async function UasaPage() {
               en: "Class, slip and analysis views will open after UASA data is entered.",
             })}
           </p>
+          <Link href={`/school/setup?year=${defaultUasaPeriod?.year ?? "2026"}&view=pupils`} className="mt-4 inline-block text-sm font-semibold text-amber-950 underline">Sediakan daftar murid sekolah</Link>
         </section>
       )}
     </AppShell>

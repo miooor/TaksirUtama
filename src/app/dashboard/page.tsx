@@ -50,7 +50,7 @@ export default async function DashboardPage({
   const summary = setup ? summarizeDashboardPbd(setup) : null;
   const setupIncomplete = !summary || summary.activeClasses === 0 || summary.activeSubjects === 0 || summary.assignments === 0;
   const entryHref = `/pbd/entry?year=${selectedYear}&semester=${semester}`;
-  const setupHref = `/pbd/setup?year=${selectedYear}&semester=${semester}`;
+  const setupHref = `/school/setup?year=${selectedYear}&semester=${semester}&view=classes`;
 
   return (
     <AppShell>

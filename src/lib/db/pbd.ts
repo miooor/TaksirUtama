@@ -212,6 +212,7 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
     yearId ? sql`
       SELECT c.id, c.name, c.enrolled_count, c.level_kind, c.level_number, c.active,
         NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.class_id = c.id AND cs.school_id = ${schoolId})
+          AND NOT EXISTS (SELECT 1 FROM student_class_enrolments roster WHERE roster.class_id = c.id AND roster.school_id = ${schoolId})
           AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = c.id) AS can_delete
       FROM school_classes c WHERE c.school_id = ${schoolId} AND c.academic_year_id = ${yearId}
       ORDER BY c.active DESC, c.level_kind, c.level_number, c.name
@@ -438,6 +439,7 @@ export async function deleteDatabasePbdSetup(context: ActorContext, raw: unknown
         DELETE FROM school_classes c
         WHERE c.id = ${input.id} AND c.school_id = ${schoolId}
           AND NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.class_id = c.id AND cs.school_id = ${schoolId})
+          AND NOT EXISTS (SELECT 1 FROM student_class_enrolments roster WHERE roster.class_id = c.id AND roster.school_id = ${schoolId})
           AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = c.id)
         RETURNING c.id, c.name
       ), logged AS (

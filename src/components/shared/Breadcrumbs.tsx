@@ -16,6 +16,10 @@ const labels: Record<string, string> = {
   years: "Tahun",
   insights: "Dapatan",
   "dialog-prestasi": "Dialog Prestasi",
+  school: "Sekolah",
+  setup: "Setup Sekolah",
+  interventions: "Intervensi",
+  entry: "Isi",
 };
 
 export function Breadcrumbs({ language }: { language: Language }) {

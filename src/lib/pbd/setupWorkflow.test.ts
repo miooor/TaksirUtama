@@ -17,6 +17,7 @@ function setup(overrides: Partial<DatabasePbdSetup> = {}): DatabasePbdSetup {
 describe("PBD setup workspace", () => {
   it("keeps an explicitly requested valid view", () => {
     expect(resolvePbdSetupView("subjects", setup())).toBe("subjects");
+    expect(resolvePbdSetupView("pupils", setup())).toBe("pupils");
   });
 
   it("guides incomplete setup in dependency order", () => {

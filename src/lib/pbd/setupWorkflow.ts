@@ -1,8 +1,8 @@
 import type { DatabasePbdSetup } from "@/lib/db/pbd";
 
-export type PbdSetupView = "classes" | "subjects" | "assignments";
+export type PbdSetupView = "classes" | "pupils" | "subjects" | "assignments";
 
-const setupViews: PbdSetupView[] = ["classes", "subjects", "assignments"];
+const setupViews: PbdSetupView[] = ["classes", "pupils", "subjects", "assignments"];
 
 export function resolvePbdSetupView(requested: string | undefined, setup: DatabasePbdSetup): PbdSetupView {
   if (setupViews.includes(requested as PbdSetupView)) return requested as PbdSetupView;
