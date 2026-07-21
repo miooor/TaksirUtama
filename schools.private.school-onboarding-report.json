@@ -1,0 +1,126 @@
+{
+  "schools": [
+    {
+      "id": "sk-sri-petaling",
+      "code": "BBB8314",
+      "slug": "sk-sri-petaling",
+      "name": "SK Sri Petaling"
+    },
+    {
+      "id": "smk-sultan-abdul-samad",
+      "code": "BEB8657",
+      "slug": "smk-sultan-abdul-samad",
+      "name": "SMK Sultan Abdul Samad"
+    },
+    {
+      "id": "smk-p-sri-aman",
+      "code": "BEB8655",
+      "slug": "smk-p-sri-aman",
+      "name": "SMK (P) Sri Aman"
+    },
+    {
+      "id": "smk-damansara-utama",
+      "code": "BEA8611",
+      "slug": "smk-damansara-utama",
+      "name": "SMK Damansara Utama"
+    },
+    {
+      "id": "smjk-katholik",
+      "code": "BEB8653",
+      "slug": "smjk-katholik",
+      "name": "SMJK Katholik"
+    },
+    {
+      "id": "smk-taman-sea",
+      "code": "BEB8656",
+      "slug": "smk-taman-sea",
+      "name": "SMK Taman Sea"
+    },
+    {
+      "id": "sk-methodist-pj",
+      "code": "BBB8307",
+      "slug": "sk-methodist-pj",
+      "name": "SK Methodist PJ"
+    },
+    {
+      "id": "sk-seksyen-6-kota-damansara",
+      "code": "BBA8250",
+      "slug": "sk-seksyen-6-kota-damansara",
+      "name": "SK Seksyen 6 Kota Damansara"
+    },
+    {
+      "id": "sjkc-chen-moh",
+      "code": "BBC8401",
+      "slug": "sjkc-chen-moh",
+      "name": "SJK(C) Chen Moh"
+    },
+    {
+      "id": "sk-taman-megah",
+      "code": "BBA8106",
+      "slug": "sk-taman-megah",
+      "name": "SK Taman Megah"
+    },
+    {
+      "id": "sjkc-puay-chai-2",
+      "code": "BBC8415",
+      "slug": "sjkc-puay-chai-2",
+      "name": "SJKC Puay Chai 2"
+    },
+    {
+      "id": "sjkc-desa-jaya-2",
+      "code": "BBC8418",
+      "slug": "sjkc-desa-jaya-2",
+      "name": "SJKC Desa Jaya 2"
+    }
+  ],
+  "workbookChecks": [
+    {
+      "schoolCode": "BBB8314",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BEB8657",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BEB8655",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BEA8611",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BEB8653",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BEB8656",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BBB8307",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BBA8250",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BBC8401",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BBA8106",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BBC8415",
+      "workbookCheck": "skipped: Google credentials not present"
+    },
+    {
+      "schoolCode": "BBC8418",
+      "workbookCheck": "skipped: Google credentials not present"
+    }
+  ]
+}

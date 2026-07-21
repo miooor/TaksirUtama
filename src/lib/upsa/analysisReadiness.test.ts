@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateUpsaClassAnalysis } from "@/lib/upsa/calculateUpsaClassAnalysis";
-import { calculateUpsaCompletionHeatmap, calculateUpsaReadiness } from "@/lib/upsa/readiness";
+import { calculateUpsaCompletionHeatmap, calculateUpsaReadiness, detectUnmatchedStudents } from "@/lib/upsa/readiness";
 import { parseUpsaClassSheet } from "@/lib/upsa/parseUpsaClassSheet";
 
 describe("UPSA alternative-language analysis and readiness", () => {
@@ -101,5 +101,55 @@ describe("UPSA alternative-language analysis and readiness", () => {
     expect(readiness).toMatchObject({ totalCells: 6, enteredCells: 5, missingCells: 1 });
     expect(groupedReadiness).toMatchObject({ entered: 2, missing: 1, total: 3 });
     expect(groupedHeatmap).toMatchObject({ entered: 2, total: 3, completionPercentage: (2 / 3) * 100 });
+  });
+});
+
+describe("detectUnmatchedStudents", () => {
+  it("returns empty array when all students are matched", () => {
+    const result = parseUpsaClassSheet([
+      ["BIL", "NAMA", "BM", "GRED"],
+      ["", "", 100, ""],
+      [1, "MURID CONTOH", 82, "A"],
+    ], "4 ANGSANA");
+
+    // Override to simulate matched status
+    result.students[0]!.matchStatus = "matched";
+    result.students[0]!.studentId = "s-1";
+
+    expect(detectUnmatchedStudents(result)).toEqual([]);
+  });
+
+  it("flags unmatched students", () => {
+    const result = parseUpsaClassSheet([
+      ["BIL", "NAMA", "BM", "GRED"],
+      ["", "", 100, ""],
+      [1, "MURID TIADA", 82, "A"],
+    ], "4 ANGSANA");
+
+    const findings = detectUnmatchedStudents(result);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "warning",
+      code: "registry_unmatched",
+      location: "4 ANGSANA",
+    });
+    expect(findings[0]!.message).toContain("1 murid");
+  });
+
+  it("flags ambiguous students separately", () => {
+    const result = parseUpsaClassSheet([
+      ["BIL", "NAMA", "BM", "GRED"],
+      ["", "", 100, ""],
+      [1, "MURID KEMBAR", 82, "A"],
+    ], "4 ANGSANA");
+
+    result.students[0]!.matchStatus = "ambiguous";
+
+    const findings = detectUnmatchedStudents(result);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "warning",
+      code: "registry_ambiguous",
+    });
   });
 });

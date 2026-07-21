@@ -41,14 +41,21 @@ export function parseUpsaClassSheet(values: unknown[][], fallbackClassName: stri
   const teacherName = findMetadataValue(values, "NAMA GURU KELAS") || "Belum ditetapkan";
   const headteacherName = findMetadataValue(values, "NAMA GURU BESAR");
 
-  // Build class-id → enrollment lookup from registry for student matching
-  const enrollmentByClassId = new Map<string, Map<string, StudentClassEnrollment>>();
+  // Build class-id → enrollment lookup from registry for student matching.
+  // Names are not identities — when two active students share the same
+  // normalized name in the same class, the slot becomes null (ambiguous).
+  const enrollmentByClassId = new Map<string, Map<string, StudentClassEnrollment | null>>();
   if (registry?.enrollments) {
     for (const enrollment of registry.enrollments) {
       if (!enrollment.active) continue;
       let classMap = enrollmentByClassId.get(enrollment.classId);
       if (!classMap) { classMap = new Map(); enrollmentByClassId.set(enrollment.classId, classMap); }
-      classMap.set(enrollment.student.normalizedName, enrollment);
+      const existing = classMap.get(enrollment.student.normalizedName);
+      if (existing === undefined) {
+        classMap.set(enrollment.student.normalizedName, enrollment);
+      } else {
+        classMap.set(enrollment.student.normalizedName, null); // collision → ambiguous
+      }
     }
   }
 
@@ -76,7 +83,9 @@ export function parseUpsaClassSheet(values: unknown[][], fallbackClassName: stri
         const classEnrollments = enrollmentByClassId.get(targetClass.classId);
         if (classEnrollments) {
           const match = classEnrollments.get(normalizedName);
-          if (match) {
+          if (match === null) {
+            matchStatus = "ambiguous";
+          } else if (match) {
             studentId = match.studentId;
             enrollmentId = match.id;
             matchStatus = "matched";

@@ -13,6 +13,7 @@ import { ClipboardCheck, School } from "lucide-react";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { getLanguage, text } from "@/lib/i18n";
 import { getSchoolPreflightReport } from "@/lib/readiness/preflight";
+import { isDatabaseConfigured } from "@/lib/db/client";
 
 export default async function ReadinessPage() {
   const context = await requireActorContext();
@@ -27,7 +28,10 @@ export default async function ReadinessPage() {
   const upsaResults = upsaResult.data;
   const pbdReadiness = calculatePbdReadiness(pbdRecords);
   const upsaReadiness = calculateUpsaReadiness(upsaResults);
-  const unmatchedFindings = upsaResults.flatMap((result) => detectUnmatchedStudents(result));
+  const dbConfigured = isDatabaseConfigured();
+  const unmatchedFindings = dbConfigured
+    ? upsaResults.flatMap((result) => detectUnmatchedStudents(result))
+    : [];
   const language = await getLanguage();
 
   return (
