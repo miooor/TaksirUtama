@@ -95,3 +95,14 @@ export async function getAssessmentClassResultWithRegistry(
     : undefined;
   return getAssessmentClassResult(context.school, period, className, registry);
 }
+
+export async function getAllAssessmentClassResultsWithRegistry(
+  context: ActorContext,
+  period: AssessmentPeriod,
+  classNames?: string[],
+) {
+  const registry = isDatabaseConfigured()
+    ? await getSchoolRegistry(context, String(period.year))
+    : undefined;
+  return getAllAssessmentClassResults(context.school, period, classNames, registry);
+}
