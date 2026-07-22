@@ -11,6 +11,7 @@ import { requireSchoolContext } from "@/lib/auth";
 import { getLanguage, text } from "@/lib/i18n";
 import { interventionPupilKey } from "@/lib/pbd/intervention";
 import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
+import { deriveOverdue, effectiveStatus } from "@/lib/pbd/interventionLifecycle";
 
 type SearchParams = {
   year?: string;
@@ -113,20 +114,23 @@ export default async function InterventionPage({
         <MetricCard label={text(language, { ms: "Entri intervensi", en: "Intervention entries" })} value={analysis.totalEntries} />
         <MetricCard label={text(language, { ms: "Murid unik", en: "Unique pupils" })} value={analysis.uniquePupils} />
         <MetricCard
-          label={text(language, { ms: "Murid segera", en: "Urgent pupils" })}
-          value={analysis.urgentPupils}
-          tone={analysis.urgentPupils ? "warning" : "default"}
+          label={text(language, { ms: "Aktif", en: "Active" })}
+          value={filteredEntries.filter((item) => item.active !== false).length}
         />
         <MetricCard
-          label={text(language, { ms: "Keutamaan tinggi", en: "High priority" })}
-          value={analysis.highPriorityPupils}
-          tone={analysis.highPriorityPupils ? "warning" : "default"}
+          label={text(language, { ms: "Lewat", en: "Overdue" })}
+          value={filteredEntries.filter((item) => deriveOverdue(item)).length}
+          tone={filteredEntries.some((item) => deriveOverdue(item)) ? "warning" : "default"}
         />
-        <MetricCard label={text(language, { ms: "Subjek berentri", en: "Subjects with entries" })} value={analysis.subjectsWithEntries} />
         <MetricCard
-          label={text(language, { ms: "Baris perlu semakan", en: "Rows needing review" })}
-          value={issues.length}
-          tone={issues.length ? "warning" : "success"}
+          label={text(language, { ms: "Perlu semakan", en: "Needs review" })}
+          value={filteredEntries.filter((item) => effectiveStatus(item) === "needs_review").length}
+          tone={filteredEntries.some((item) => effectiveStatus(item) === "needs_review") ? "warning" : "default"}
+        />
+        <MetricCard
+          label={text(language, { ms: "Selesai", en: "Completed" })}
+          value={filteredEntries.filter((item) => effectiveStatus(item) === "completed").length}
+          tone="success"
         />
       </div>
 
@@ -270,6 +274,14 @@ export default async function InterventionPage({
                               <StatusBadge>{dialogRow.theme}</StatusBadge>
                               <StatusBadge>{dialogRow.owner}</StatusBadge>
                             </>
+                          ) : null}
+                          {entry.id ? (
+                            <Link
+                              href={`/pbd/interventions/entry?year=${year}&semester=${semester}&subjectId=${entry.subjectId ?? ""}&status=${deriveOverdue(entry) ? "overdue" : effectiveStatus(entry)}`}
+                              className="ml-auto text-xs font-medium text-primary-700 underline transition-colors hover:text-primary-800"
+                            >
+                              Buka editor
+                            </Link>
                           ) : null}
                         </div>
                         <dl className="mt-3 grid gap-3 text-sm md:grid-cols-3">

@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ActorContext } from "@/lib/auth/actor";
 import { getDatabase, isDatabaseConfigured } from "@/lib/db/client";
 import { getDatabasePbdSetup } from "@/lib/db/pbd";
+import { validateCompletion } from "@/lib/pbd/interventionLifecycle";
 import type { PbdInterventionEntry } from "@/types/intervention";
 
 const saveSchema = z.object({
@@ -14,6 +15,10 @@ const saveSchema = z.object({
   tpLevel: z.coerce.number().int().min(1).max(2),
   problem: z.string().trim().min(1, "Masalah diperlukan.").max(2000),
   intervention: z.string().trim().min(1, "Intervensi diperlukan.").max(2000),
+  workflowStatus: z.enum(["planned", "in_progress", "needs_review", "completed"]).default("planned"),
+  reviewDueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  followUpNote: z.string().trim().max(2000).nullable().optional(),
+  reviewedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 const archiveSchema = z.object({
   interventionId: z.string().uuid(),
@@ -39,6 +44,7 @@ export async function getDatabasePbdInterventions(
   const rows = await sql`
     SELECT item.id, item.revision, item.active, item.tp_level, item.problem, item.intervention,
       item.student_id, item.class_enrolment_id, item.class_subject_id,
+      item.workflow_status, item.review_due_on, item.follow_up_note, item.reviewed_on,
       st.display_name AS student_name, st.normalized_name,
       c.id AS class_id, c.name AS class_name, c.level_number,
       s.id AS subject_id, s.code AS subject_code, s.name AS subject_name
@@ -60,11 +66,21 @@ export async function getDatabasePbdInterventions(
     year: row.level_number === null ? Number(String(row.class_name).match(/\d+/)?.[0] ?? 0) : Number(row.level_number),
     tp: Number(row.tp_level) as 1 | 2, problem: String(row.problem), intervention: String(row.intervention),
     semester, revision: Number(row.revision), active: Boolean(row.active),
+    workflowStatus: (row.workflow_status ?? "planned") as PbdInterventionEntry["workflowStatus"],
+    reviewDueOn: row.review_due_on ? String(row.review_due_on) : null,
+    followUpNote: row.follow_up_note ? String(row.follow_up_note) : null,
+    reviewedOn: row.reviewed_on ? String(row.reviewed_on) : null,
   }));
 }
 
 export async function saveDatabasePbdIntervention(context: ActorContext, raw: unknown) {
   const input = saveSchema.parse(raw);
+  const completionError = validateCompletion({
+    workflowStatus: input.workflowStatus,
+    followUpNote: input.followUpNote ?? null,
+    reviewDueOn: input.reviewDueOn ?? null,
+  });
+  if (completionError) throw new Error(completionError);
   const setup = await getDatabasePbdSetup(context, input.year, input.semester);
   if (!setup.periodId) throw new Error("Tempoh PBD tidak ditemui.");
   const sql = requireDatabase();
@@ -72,7 +88,8 @@ export async function saveDatabasePbdIntervention(context: ActorContext, raw: un
     SELECT * FROM save_pbd_student_intervention(
       ${randomUUID()}, ${randomUUID()}, ${context.school.id}, ${context.actor.id}, ${setup.periodId},
       ${input.classSubjectId}, ${input.classEnrollmentId}, ${input.expectedRevision}, ${input.tpLevel},
-      ${input.problem}, ${input.intervention}
+      ${input.problem}, ${input.intervention}, ${input.workflowStatus},
+      ${input.reviewDueOn ?? null}, ${input.followUpNote || null}, ${input.reviewedOn ?? null}
     )
   `;
   return { id: String(rows[0]?.id), revision: Number(rows[0]?.revision), changed: Boolean(rows[0]?.changed) };

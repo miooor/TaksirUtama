@@ -1,5 +1,6 @@
 import { interventionPupilKey, summarizeInterventionPupils } from "@/lib/pbd/intervention";
 import { classifyInterventionTheme, nextActionForInterventionTheme, ownerForInterventionTheme } from "@/lib/dialog/interventionTheme";
+import { deriveOverdue, effectiveStatus } from "@/lib/pbd/interventionLifecycle";
 import type { DialogInterventionRow } from "@/types/dialog";
 import type { PbdInterventionEntry } from "@/types/intervention";
 
@@ -8,7 +9,7 @@ export function buildDialogInterventionRows(entries: PbdInterventionEntry[]): Di
   const pupilByKey = new Map(pupils.map((pupil) => [pupil.key, pupil]));
 
   return entries
-    .map((entry) => {
+    .map((entry): DialogInterventionRow | null => {
       const key = interventionPupilKey(entry);
       const pupil = pupilByKey.get(key);
       if (!pupil) return null;
@@ -28,7 +29,8 @@ export function buildDialogInterventionRows(entries: PbdInterventionEntry[]): Di
         subjectCount: pupil.subjectCount,
         repeatedRisk: pupil.subjectCount >= 2,
         pupil,
-      } satisfies DialogInterventionRow;
+        entry,
+      };
     })
     .filter((row): row is DialogInterventionRow => row !== null)
     .sort((a, b) =>
@@ -56,5 +58,21 @@ export function buildDialogInterventionCsvRows(rows: DialogInterventionRow[]) {
     Masalah: row.problem,
     Intervensi: row.intervention,
     "Tindakan Seterusnya": row.nextAction,
+    Status: row.entry ? effectiveStatusLabel(row.entry) : "Dirancang",
+    "Tarikh Semakan": row.entry?.reviewDueOn ?? "",
+    Lewat: row.entry ? (deriveOverdue(row.entry) ? "Ya" : "Tidak") : "Tidak",
+    "Tarikh Semakan Terakhir": row.entry?.reviewedOn ?? "",
+    "Nota Susulan": row.entry?.followUpNote ?? "",
   }));
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  planned: "Dirancang",
+  in_progress: "Berjalan",
+  needs_review: "Perlu semakan",
+  completed: "Selesai",
+};
+
+function effectiveStatusLabel(entry: PbdInterventionEntry): string {
+  return STATUS_LABELS[effectiveStatus(entry)] ?? "Dirancang";
 }

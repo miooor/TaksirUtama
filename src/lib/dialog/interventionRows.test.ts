@@ -35,8 +35,24 @@ describe("dialog intervention helpers", () => {
         Tema: "Literasi",
         Pemilik: "KP",
         "Risiko Berulang": "Ya",
+        Status: "Dirancang",
+        Lewat: "Tidak",
       }),
     ]);
+  });
+
+  it("includes lifecycle fields in CSV rows when present", () => {
+    const rows = buildDialogInterventionRows([
+      { ...entry("BM", "Ali Ahmad", "5 Angsana", 1, "Lemah membaca"), workflowStatus: "in_progress" as const, reviewDueOn: "2026-07-20", followUpNote: "Sudah dibimbing", reviewedOn: "2026-07-19" },
+    ]);
+    const csvRows = buildDialogInterventionCsvRows(rows);
+    expect(csvRows[0]).toMatchObject({
+      Status: "Berjalan",
+      "Tarikh Semakan": "2026-07-20",
+      Lewat: "Ya",
+      "Tarikh Semakan Terakhir": "2026-07-19",
+      "Nota Susulan": "Sudah dibimbing",
+    });
   });
 });
 

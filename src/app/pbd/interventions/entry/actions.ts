@@ -19,7 +19,7 @@ function refreshInterventions() {
 
 export async function saveInterventionAction(_: InterventionActionState, formData: FormData): Promise<InterventionActionState> {
   try {
-    const context = await requireRole("school_admin", "platform_admin");
+    const context = await requireRole("teacher", "school_admin", "platform_admin");
     const result = await saveDatabasePbdIntervention(context, Object.fromEntries(formData));
     refreshInterventions();
     return { success: result.changed ? "Intervensi disimpan." : "Tiada perubahan baharu.", revision: result.revision };
@@ -30,7 +30,7 @@ export async function saveInterventionAction(_: InterventionActionState, formDat
 
 export async function archiveInterventionAction(_: InterventionActionState, formData: FormData): Promise<InterventionActionState> {
   try {
-    const context = await requireRole("school_admin", "platform_admin");
+    const context = await requireRole("teacher", "school_admin", "platform_admin");
     const restore = formData.get("restore") === "true";
     const result = await setDatabasePbdInterventionArchived(context, {
       interventionId: formData.get("interventionId"),
