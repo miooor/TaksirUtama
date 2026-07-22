@@ -16,6 +16,7 @@ const labels: Record<string, string> = {
   subjects: "Subjek",
   years: "Tahun",
   insights: "Dapatan",
+  progress: "Kemajuan",
   "dialog-prestasi": "Dialog Prestasi",
   school: "Sekolah",
   setup: "Setup Sekolah",
