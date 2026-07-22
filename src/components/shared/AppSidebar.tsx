@@ -24,12 +24,12 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
-type Props = { schoolName: string; systemName: string; logoPath: string; year: string; controls: ReactNode };
+type Props = { schoolName: string; systemName: string; logoPath: string; year: string; controls: ReactNode; canManageSetup: boolean };
 
 type NavItem = { label: string; href: string; icon: LucideIcon; active: boolean };
 type NavGroup = { title: string | null; items: NavItem[] };
 
-function buildNavGroups(year: string, semester: string, pathname: string): NavGroup[] {
+function buildNavGroups(year: string, semester: string, pathname: string, canManageSetup: boolean): NavGroup[] {
   return [
     {
       title: null,
@@ -62,16 +62,16 @@ function buildNavGroups(year: string, semester: string, pathname: string): NavGr
         { label: "Dapatan", href: `/insights?year=${year}&semester=${semester}`, icon: Lightbulb, active: pathname.startsWith("/insights") },
       ],
     },
-    {
+    ...(canManageSetup ? [{
       title: "Tadbir",
       items: [
         { label: "Setup Sekolah", href: `/school/setup?year=${year}&semester=${semester}`, icon: Settings2, active: pathname.startsWith("/school/setup") || pathname === "/pbd/setup" },
       ],
-    },
+    }] : []),
   ];
 }
 
-function Identity({ schoolName, systemName, logoPath, year, collapsed }: Omit<Props, "controls"> & { collapsed?: boolean }) {
+function Identity({ schoolName, systemName, logoPath, year, collapsed }: Omit<Props, "controls" | "canManageSetup"> & { collapsed?: boolean }) {
   const query = useSearchParams();
   const selectedYear = query.get("year") ?? year;
   const semester = query.get("semester") === "2" ? "2" : "1";
@@ -88,19 +88,19 @@ function Identity({ schoolName, systemName, logoPath, year, collapsed }: Omit<Pr
   );
 }
 
-function SidebarNav({ year, collapsed, onNavigate }: { year: string; collapsed?: boolean; onNavigate?: () => void }) {
+function SidebarNav({ year, collapsed, onNavigate, canManageSetup }: { year: string; collapsed?: boolean; onNavigate?: () => void; canManageSetup: boolean }) {
   const pathname = usePathname();
   const query = useSearchParams();
   const selectedYear = query.get("year") ?? year;
   const semester = query.get("semester") === "2" ? "2" : "1";
-  const groups = buildNavGroups(selectedYear, semester, pathname);
+  const groups = buildNavGroups(selectedYear, semester, pathname, canManageSetup);
 
   return (
     <nav aria-label="Navigasi utama" className="space-y-5">
       {groups.map((group, index) => (
         <div key={index}>
           {group.title && !collapsed && (
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-disabled">{group.title}</p>
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{group.title}</p>
           )}
           {group.title && collapsed && index > 0 && <div className="mx-3 mb-2 border-t border-border-default" />}
           <div className="space-y-0.5">
@@ -131,7 +131,7 @@ function SidebarNav({ year, collapsed, onNavigate }: { year: string; collapsed?:
   );
 }
 
-function SidebarContents({ schoolName, systemName, logoPath, year, controls, collapsed, onToggle, onNavigate }: Props & { collapsed: boolean; onToggle: () => void; onNavigate?: () => void }) {
+function SidebarContents({ schoolName, systemName, logoPath, year, controls, canManageSetup, collapsed, onToggle, onNavigate }: Props & { collapsed: boolean; onToggle: () => void; onNavigate?: () => void }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between gap-2 pr-1">
@@ -146,11 +146,11 @@ function SidebarContents({ schoolName, systemName, logoPath, year, controls, col
         </button>
       </div>
       <div className="mt-6 min-h-0 flex-1 overflow-y-auto pb-2">
-        <SidebarNav year={year} collapsed={collapsed} onNavigate={onNavigate} />
+        <SidebarNav year={year} collapsed={collapsed} onNavigate={onNavigate} canManageSetup={canManageSetup} />
       </div>
       <div className="mt-4 space-y-2 border-t border-border-default pt-4">
         {controls}
-        <p className="px-1 text-[10px] leading-4 text-text-disabled">Dibina oleh guru untuk guru 🇲🇾</p>
+        <p className="px-1 text-[10px] leading-4 text-text-muted">Dibina oleh guru untuk guru 🇲🇾</p>
       </div>
     </div>
   );
@@ -200,7 +200,7 @@ export function AppSidebar(props: Props) {
                   </Dialog.Close>
                 </div>
                 <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
-                  <SidebarNav year={props.year} onNavigate={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))} />
+                  <SidebarNav year={props.year} canManageSetup={props.canManageSetup} onNavigate={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))} />
                 </div>
                 <div className="mt-4 space-y-2 border-t border-border-default pt-4">{props.controls}</div>
               </div>

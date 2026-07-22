@@ -19,6 +19,10 @@ export type PbdActionState = { error?: string; success?: string; changedCount?: 
 
 function message(error: unknown) {
   if (error && typeof error === "object" && "code" in error) {
+    // P0001 carries the deliberate Malay guidance raised by the pbd_save_*
+    // functions (stale revision, finalized record, closed period), so surface
+    // it directly; other database codes get the generic recoverable message.
+    if (String(error.code) === "P0001" && error instanceof Error && error.message) return error.message;
     return "Data tidak dapat disimpan. Semak maklumat kelas dan cuba semula.";
   }
   return error instanceof Error ? error.message : "Tindakan tidak dapat disimpan. Cuba lagi.";
@@ -93,8 +97,10 @@ function readRows(formData: FormData) {
 }
 
 export async function savePbdClassEntriesAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  let logContext: { schoolId?: string; actorId?: string; role?: string } = {};
   try {
-    const context = await requireRole("school_admin", "platform_admin");
+    const context = await requireRole("school_admin", "platform_admin", "teacher");
+    logContext = { schoolId: context.school.id, actorId: context.actor.id, role: context.actor.role };
     const result = await saveDatabasePbdClassEntries(context, {
       classId: formData.get("classId"), year: formData.get("year"), semester: formData.get("semester"),
       finalizeClassSubjectId: formData.get("intent") === "finalize" ? formData.get("targetClassSubjectId") : null,
@@ -103,8 +109,22 @@ export async function savePbdClassEntriesAction(_: PbdActionState, formData: For
     });
     refresh();
     const intent = formData.get("intent");
-    return { success: intent === "finalize" ? "Draf kelas disimpan dan subjek dimuktamadkan." : intent === "reopen" ? "Draf kelas disimpan dan subjek dibuka semula." : "Semua draf kelas disimpan.", changedCount: result.filter((row) => row.changed).length, savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }) };
+    const changedCount = result.filter((row) => row.changed).length;
+    const semester = formData.get("semester") === "2" ? "2" : "1";
+    return {
+      success: intent === "finalize" ? "Draf kelas disimpan dan subjek dimuktamadkan." : intent === "reopen" ? "Draf kelas disimpan dan subjek dibuka semula." : "Semua draf kelas disimpan.",
+      changedCount,
+      savedAt: new Date().toLocaleTimeString("ms-MY", { hour: "2-digit", minute: "2-digit" }),
+      semester,
+    };
   } catch (error) {
+    const databaseCode = error && typeof error === "object" && "code" in error ? String(error.code) : null;
+    logEvent("error", "pbd_class_entries_save_failed", {
+      route: "/pbd/entry",
+      operation: String(formData.get("intent") ?? "save"),
+      ...logContext,
+      errorCategory: databaseCode ? `database_${databaseCode}` : error instanceof Error ? error.name : "unknown_error",
+    });
     return { error: message(error) };
   }
 }
@@ -112,7 +132,7 @@ export async function savePbdClassEntriesAction(_: PbdActionState, formData: For
 export async function savePbdSubjectEntriesAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
   let logContext: { schoolId?: string; actorId?: string; role?: string } = {};
   try {
-    const context = await requireRole("school_admin", "platform_admin");
+    const context = await requireRole("school_admin", "platform_admin", "teacher");
     logContext = { schoolId: context.school.id, actorId: context.actor.id, role: context.actor.role };
     const result = await saveDatabasePbdSubjectEntries(context, {
       subjectId: formData.get("subjectId"), year: formData.get("year"), semester: formData.get("semester"),

@@ -82,4 +82,38 @@ describe("dashboard PBD summary", () => {
     ];
     expect(summarizeDashboardPbd(setup(rows, { subjects })).subjectsNeedingAction.map((item) => item.code)).toEqual(["B", "A"]);
   });
+
+  it("produces a class-level work queue ordered mismatched first, then ready, then empty", () => {
+    const rows: Row[] = [
+      { ...baseRow, classSubjectId: "assignment-1", classId: "class-1", className: "1 Cemerlang", entry: entry("draft", [0, 0, 10, 10, 10, 0, 0]) },
+      { ...baseRow, classSubjectId: "assignment-2", classId: "class-2", className: "2 Bestari", entry: entry("draft", [1, null, null, null, null, null, null]) },
+      { ...baseRow, classSubjectId: "assignment-3", classId: "class-3", className: "3 Angsana", entry: entry("draft", [5, 5, 5, 5, null, null, null]) },
+      { ...baseRow, classSubjectId: "assignment-4", classId: "class-4", className: "4 Cerdik", entry: entry("final", [0, 0, 8, 8, 8, 0, 0], 24) },
+    ];
+    const classes = [
+      { id: "class-1", name: "1 Cemerlang", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 1, active: true, canDelete: false },
+      { id: "class-2", name: "2 Bestari", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 2, active: true, canDelete: false },
+      { id: "class-3", name: "3 Angsana", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 3, active: true, canDelete: false },
+      { id: "class-4", name: "4 Cerdik", enrolledCount: 24, levelKind: "tahun" as const, levelNumber: 4, active: true, canDelete: false },
+    ];
+    const summary = summarizeDashboardPbd(setup(rows, { classes }));
+    expect(summary.classesNeedingAction.map((item) => item.name)).toEqual(["2 Bestari", "3 Angsana", "1 Cemerlang"]);
+    expect(summary.classesNeedingAction[0]).toMatchObject({ id: "class-2", assignments: 1, mismatch: 1 });
+    expect(summary.classesNeedingAction[1]).toMatchObject({ id: "class-3", mismatch: 1 });
+    expect(summary.classesNeedingAction[2]).toMatchObject({ id: "class-1", empty: 0, ready: 1 });
+  });
+
+  it("aggregates multiple subjects into one class queue item", () => {
+    const rows: Row[] = [
+      { ...baseRow, classSubjectId: "assignment-1", classId: "class-1", className: "1 Cemerlang", subjectId: "subject-1", entry: entry("draft", [0, 0, 10, 10, 10, 0, 0]) },
+      { ...baseRow, classSubjectId: "assignment-2", classId: "class-1", className: "1 Cemerlang", subjectId: "subject-2", subjectCode: "BI", subjectName: "Bahasa Inggeris", entry: entry("draft", [1, null, null, null, null, null, null]) },
+    ];
+    const subjects = [
+      { id: "subject-1", code: "BM", name: "Bahasa Melayu", active: true, canDelete: false },
+      { id: "subject-2", code: "BI", name: "Bahasa Inggeris", active: true, canDelete: false },
+    ];
+    const summary = summarizeDashboardPbd(setup(rows, { subjects }));
+    expect(summary.classesNeedingAction).toHaveLength(1);
+    expect(summary.classesNeedingAction[0]).toMatchObject({ id: "class-1", name: "1 Cemerlang", assignments: 2, ready: 1, mismatch: 1 });
+  });
 });

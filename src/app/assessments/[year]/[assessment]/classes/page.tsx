@@ -2,6 +2,7 @@ import { BarChart3, PenLine, UsersRound } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -14,10 +15,18 @@ import { getLanguage, text } from "@/lib/i18n";
 import { assessmentBasePath, assessmentClassPath, assessmentYearPath, getAssessmentPageContext } from "@/lib/assessmentPages";
 import { assessmentLabel } from "@/lib/config/periods";
 import { calculateUpsaYearAnalysis } from "@/lib/upsa/calculateUpsaYearAnalysis";
+import type { UpsaClassResult } from "@/types/upsa";
 
 export default async function AssessmentClassesPage({ params }: { params: Promise<{ year: string; assessment: string }> }) {
   const { school, period } = await getAssessmentPageContext(params);
-  const results = await getAllAssessmentClassResults(school, period);
+  let results: UpsaClassResult[] = [];
+  let dataError = false;
+  try {
+    results = await getAllAssessmentClassResults(school, period);
+  } catch (error) {
+    dataError = true;
+    console.error("assessment_classes_load_failed", { schoolId: school.id, year: period.year, assessment: period.assessment, error });
+  }
   const classes = results.map((result) => result.className);
   const grouped = Map.groupBy(results, (result) => result.className.split(" ")[0]);
   const readiness = calculateUpsaReadiness(results);
@@ -35,7 +44,16 @@ export default async function AssessmentClassesPage({ params }: { params: Promis
         icon={UsersRound}
       />
 
-      {!results.length ? (
+      {dataError ? (
+        <Alert variant="danger" title={text(language, { ms: "Markah tidak dapat dimuatkan", en: "Marks could not be loaded" })} className="mt-6">
+          {text(language, {
+            ms: "Semak sambungan workbook Google Sheets sekolah anda, kemudian muatkan semula halaman ini. Data sekolah anda tidak diubah.",
+            en: "Check your school's Google Sheets workbook connection, then reload this page. Your school data was not changed.",
+          })}
+        </Alert>
+      ) : null}
+
+      {!results.length && !dataError ? (
         <EmptyState
           icon={UsersRound}
           title="Daftar murid sekolah"
