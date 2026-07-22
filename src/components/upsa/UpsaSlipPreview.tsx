@@ -14,7 +14,7 @@ export function UpsaSlipPreview({ student, slipTitle, school }: { student: UpsaS
   const printedSubjects = student.subjects.filter((subject) => subject.status !== "missing");
 
   return (
-    <section id={student.id} className="bg-white px-8 py-7">
+    <section id={student.id} className="bg-white px-8 py-7 text-slate-900 print:shadow-none">
       <div className="h-20" aria-hidden="true" />
 
       <div className="mx-auto max-w-[650px] border bg-slate-100 px-4 py-2 text-center">

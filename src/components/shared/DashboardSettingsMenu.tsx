@@ -2,7 +2,6 @@
 
 import { Settings2 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import Link from "next/link";
 import type { Language } from "@/lib/i18n";
 
 export function DashboardSettingsMenu({ language }: { language: Language }) {
@@ -29,11 +28,8 @@ export function DashboardSettingsMenu({ language }: { language: Language }) {
       </summary>
       <div className="absolute left-0 top-full z-20 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-border-default bg-surface-overlay p-4 shadow-overlay animate-fade-in">
         <>
-          <Link href="/settings/data-sources" className="block rounded-lg border border-border-default px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary">
-            {lang === "en" ? "Data sources" : "Sumber data"}
-          </Link>
           <div>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-text-muted">
+              <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                 {lang === "en" ? "Language" : "Bahasa"}
               </p>
               <div className="mt-2 flex gap-2">

@@ -478,3 +478,23 @@
   background: var(--surface-inset);
   color: var(--text-primary);
 }
+
+/* ============================================================
+   Print: force a light, chrome-free output so browser
+   "Save as PDF" / print produces clean light-mode documents.
+   ============================================================ */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  aside,
+  footer,
+  nav,
+  [data-print-hide] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}

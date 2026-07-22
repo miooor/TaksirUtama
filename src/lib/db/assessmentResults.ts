@@ -245,6 +245,9 @@ export async function buildClassResultFromDb(
   if (!classEnrollment) return null;
   const classId = classEnrollment.classId;
 
+  const teacherRows = await sql`SELECT teacher_name FROM school_classes WHERE id = ${classId} AND school_id = ${schoolId} LIMIT 1`;
+  const teacherName = teacherRows[0]?.teacher_name ? String(teacherRows[0].teacher_name) : "";
+
   const rows = await sql`
     SELECT ar.*, ss.display_name, ss.normalized_name, sce.roster_number
     FROM assessment_results ar
@@ -313,7 +316,7 @@ export async function buildClassResultFromDb(
       bil: entry.rosterNumber !== null ? String(entry.rosterNumber) : String(idx),
       name: entry.name,
       className,
-      teacherName: "",
+      teacherName,
       subjects: subjectResults,
       average,
       totalMarks: validSubjects.length ? totalMarks : null,
@@ -329,7 +332,7 @@ export async function buildClassResultFromDb(
   const expectedByClass = await loadExpectedSubjectCodesByClass(schoolId);
   hydrateExpectedSubjects(students, expectedByClass.get(classId) ?? [], schoolSubjects);
 
-  return { className, teacherName: "", students };
+  return { className, teacherName, students };
 }
 
 /**
@@ -345,7 +348,15 @@ export async function buildAllClassResultsFromDb(
   const byClass = await getAllAssessmentResultsForPeriod(context, period, academicYearId);
   if (byClass.size === 0) return [];
 
+  const sql = getDatabase();
   const schoolSubjects = await loadSchoolSubjects(context.school.id);
+
+  // Build a class ID → teacher name lookup from school_classes
+  const teacherRaw = await sql`SELECT id, teacher_name FROM school_classes WHERE school_id = ${context.school.id} AND academic_year_id = ${academicYearId}`;
+  const teacherNameByClass = new Map<string, string>();
+  for (const row of teacherRaw) {
+    teacherNameByClass.set(String(row.id), row.teacher_name ? String(row.teacher_name) : "");
+  }
 
   // Build a class ID → class name lookup from registry
   const classNameById = new Map<string, string>();
@@ -360,6 +371,7 @@ export async function buildAllClassResultsFromDb(
   for (const [classId, rows] of byClass) {
     const className = classNameById.get(classId);
     if (!className || rows.length === 0) continue;
+    const teacherName = teacherNameByClass.get(classId) ?? "";
 
     // Group by enrollment
     const studentMap = new Map<string, {
@@ -418,7 +430,7 @@ export async function buildAllClassResultsFromDb(
         bil: String(idx),
         name: entry.name,
         className,
-        teacherName: "",
+        teacherName,
         subjects: subjectResults,
         average,
         totalMarks: validSubjects.length ? totalMarks : null,
@@ -433,7 +445,7 @@ export async function buildAllClassResultsFromDb(
 
     hydrateExpectedSubjects(students, expectedByClass.get(classId) ?? [], schoolSubjects);
 
-    results.push({ className, teacherName: "", students });
+    results.push({ className, teacherName, students });
   }
 
   return results;
