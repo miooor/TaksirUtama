@@ -14,22 +14,29 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { getLanguage, text } from "@/lib/i18n";
 import { getSchoolPreflightReport } from "@/lib/readiness/preflight";
 import { isDatabaseConfigured } from "@/lib/db/client";
+import { getSchoolRegistry } from "@/lib/db/schoolRegistry";
 
 export default async function ReadinessPage() {
   const context = await requireActorContext();
   const school = context.school;
   const { defaultPbdPeriod, defaultUpsaPeriod } = school;
-  const [pbdResult, upsaResult, preflight] = await Promise.all([
+  const dbConfigured = isDatabaseConfigured();
+  const [pbdResult, upsaResult, preflight, registry] = await Promise.all([
     defaultPbdPeriod ? getAllPbdRecords(school, defaultPbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
     defaultUpsaPeriod ? getAllAssessmentClassResultsHybrid(context, defaultUpsaPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
     getSchoolPreflightReport(school),
+    dbConfigured && defaultUpsaPeriod ? getSchoolRegistry(context, String(defaultUpsaPeriod.year)) : Promise.resolve(null),
   ]);
   const pbdRecords = pbdResult.data;
   const upsaResults = upsaResult.data;
   const pbdReadiness = calculatePbdReadiness(pbdRecords);
   const upsaReadiness = calculateUpsaReadiness(upsaResults);
-  const dbConfigured = isDatabaseConfigured();
-  const unmatchedFindings = dbConfigured
+  // Only surface unmatched-student findings when a populated academic-year
+  // roster exists. Without enrollments, parseUpsaClassSheet leaves every pupil
+  // "unmatched", which would otherwise warn for schools that simply have not
+  // imported a roster yet (cannot distinguish "no roster" from real mismatches).
+  const hasRoster = registry !== null && registry.enrollments.length > 0;
+  const unmatchedFindings = hasRoster
     ? upsaResults.flatMap((result) => detectUnmatchedStudents(result))
     : [];
   const language = await getLanguage();

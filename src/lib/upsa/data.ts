@@ -72,6 +72,14 @@ async function loadAllAssessmentClassResults(school: SchoolContext, period: Asse
   return Promise.all(classes.map((className) => getAssessmentClassResult(school, period, className, registry)));
 }
 
+// The cached result depends on whether a registry was supplied, so the cache
+// key must distinguish registry-aware entries from plain ones. Otherwise a
+// non-registry caller (e.g. the classes page) and a registry-aware caller
+// (readiness page / registry APIs) would poison each other's cached students.
+function registryCacheSegment(registry?: SchoolRegistry): string {
+  return registry ? `registry:${registry.academicYearId ?? "no-year"}` : "no-registry";
+}
+
 export async function getAllAssessmentClassResults(
   school: SchoolContext,
   period: AssessmentPeriod,
@@ -81,7 +89,7 @@ export async function getAllAssessmentClassResults(
   if (classNames) return loadAllAssessmentClassResults(school, period, classNames, registry);
   return unstable_cache(
     () => loadAllAssessmentClassResults(school, period, undefined, registry),
-    ["all-assessment-class-results", ...assessmentCacheIdentity(school, period)],
+    ["all-assessment-class-results", registryCacheSegment(registry), ...assessmentCacheIdentity(school, period)],
     { tags: [`school:${school.id}:assessments`, `school:${school.id}:workbooks`], revalidate: 300 },
   )();
 }
