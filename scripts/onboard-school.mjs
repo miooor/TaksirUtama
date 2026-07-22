@@ -30,8 +30,8 @@ function derivePasswordHash(password, salt = randomBytes(16)) {
   });
 }
 
-function temporaryPassword() {
-  return `${randomBytes(12).toString("base64url")}!7a`;
+function temporaryPassword(schoolCode) {
+  return `${schoolCode}ppdpu`;
 }
 
 function assertUnique(schools, field) {
@@ -57,7 +57,7 @@ for (const school of raw) {
   }
   let passwordHash = school.passwordHash;
   if (!passwordHash) {
-    const password = temporaryPassword();
+    const password = temporaryPassword(school.code);
     passwordHash = await derivePasswordHash(password);
     credentials.push({ schoolCode: school.code, temporaryPassword: password });
   }
