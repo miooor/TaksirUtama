@@ -14,6 +14,7 @@ import {
   emptyPbdEntryValues,
   entryPasteErrorMessages,
   fillPbdEntryBlanks,
+  legacySubjectEntryRecoveryKey,
   parseEntryPaste,
   pbdEntryBalance,
   pbdEntryFields,
@@ -132,6 +133,9 @@ export function PbdEntryWorkspace({
   const [values, setValues] = useState<ValuesByRow>(initialValues);
   const revisions = useMemo(() => Object.fromEntries(rows.map((row) => [row.classSubjectId, row.entry?.revision ?? 0])), [rows]);
   const recoveryKey = selection ? pbdEntryRecoveryKey(setup.schoolId, year, semester, mode, selection.id) : null;
+  const legacyRecoveryKey = mode === "subject" && selectedSubject
+    ? legacySubjectEntryRecoveryKey(setup.schoolId, year, semester, selectedSubject.id)
+    : null;
   const saveAction = mode === "class" ? savePbdClassEntriesAction : savePbdSubjectEntriesAction;
   const [state, action, pending] = useActionState(async (previousState: PbdActionState, formData: FormData) => {
     const nextState = await saveAction(previousState, formData);
@@ -148,21 +152,32 @@ export function PbdEntryWorkspace({
     if (!recoveryKey) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     try {
-      const raw = sessionStorage.getItem(recoveryKey);
+      let raw = sessionStorage.getItem(recoveryKey);
+      let sourceKey = recoveryKey;
+      if (!raw && legacyRecoveryKey) {
+        raw = sessionStorage.getItem(legacyRecoveryKey);
+        sourceKey = legacyRecoveryKey;
+      }
       if (!raw) return;
       const recovered = JSON.parse(raw) as RecoveryDraft;
       const validValues = rows.every((row) => pbdEntryFields.every((field) => typeof recovered.values?.[row.classSubjectId]?.[field] === "string"));
       if (validValues && revisionsMatch(revisions, recovered.revisions ?? {})) {
+        if (sourceKey !== recoveryKey) {
+          sessionStorage.setItem(recoveryKey, raw);
+          sessionStorage.removeItem(sourceKey);
+        }
         timer = setTimeout(() => setRecoveryDraft(recovered), 0);
       } else {
         sessionStorage.removeItem(recoveryKey);
+        if (legacyRecoveryKey) sessionStorage.removeItem(legacyRecoveryKey);
         timer = setTimeout(() => setRecoveryNotice("Draf tempatan lama dibuang kerana rekod telah berubah."), 0);
       }
     } catch {
       sessionStorage.removeItem(recoveryKey);
+      if (legacyRecoveryKey) sessionStorage.removeItem(legacyRecoveryKey);
     }
     return () => { if (timer) clearTimeout(timer); };
-  }, [recoveryKey, revisions, rows]);
+  }, [recoveryKey, legacyRecoveryKey, revisions, rows]);
 
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {

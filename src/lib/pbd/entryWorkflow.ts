@@ -65,6 +65,11 @@ export function pbdEntryRecoveryKey(schoolId: string, year: string, semester: st
   return `pbd-entry:${schoolId}:${year}:${semester}:${mode}:${selectionId}`;
 }
 
+/** Pre-cockpit subject-only recovery key; read as a fallback so unsaved drafts survive the rollout. */
+export function legacySubjectEntryRecoveryKey(schoolId: string, year: string, semester: string, subjectId: string) {
+  return `pbd-subject-entry:${schoolId}:${year}:${semester}:${subjectId}`;
+}
+
 export function pbdSemesterSwitchMessage(currentSemester: string, nextSemester: string) {
   return `Perubahan Semester ${currentSemester} belum disimpan. Tukar ke Semester ${nextSemester}?`;
 }
@@ -135,14 +140,18 @@ export function sortClassesForEntry<T extends { id: string; name: string; levelK
 export type EntryPasteGrid = string[][];
 export type EntryPasteResult = { ok: true; grid: EntryPasteGrid } | { ok: false; reason: "empty" | "columns" | "values" };
 
+/** Matches the database count cap (nullableCount in @/lib/db/pbd) so pastes are rejected before touching grid state. */
+export const pbdEntryMaxCount = 3000;
+
 const pasteCellPattern = /^\d+$/;
 
 /**
  * Parses tab/newline clipboard text from Excel or Google Sheets into a
  * validated grid of pupil counts. Empty cells are preserved as "" so the
  * caller can leave existing values untouched. The whole paste is rejected
- * when any non-empty cell is not a non-negative integer or when a row is
- * wider than the TP columns, so malformed data is never partially applied.
+ * when any non-empty cell is not a non-negative integer within the database
+ * count cap, or when a row is wider than the TP columns, so malformed data
+ * is never partially applied.
  */
 export function parseEntryPaste(text: string): EntryPasteResult {
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
@@ -156,7 +165,8 @@ export function parseEntryPaste(text: string): EntryPasteResult {
   }
   for (const row of grid) {
     for (const cell of row) {
-      if (cell !== "" && !pasteCellPattern.test(cell)) return { ok: false, reason: "values" };
+      if (cell === "") continue;
+      if (!pasteCellPattern.test(cell) || Number(cell) > pbdEntryMaxCount) return { ok: false, reason: "values" };
     }
   }
   return { ok: true, grid };

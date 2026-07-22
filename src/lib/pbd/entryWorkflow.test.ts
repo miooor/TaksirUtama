@@ -3,6 +3,7 @@ import {
   emptyPbdEntryValues,
   entryPasteErrorMessages,
   fillPbdEntryBlanks,
+  legacySubjectEntryRecoveryKey,
   parseEntryPaste,
   pbdEntryBalance,
   pbdEntryHref,
@@ -67,6 +68,12 @@ describe("PBD entry workflow", () => {
     expect(pbdEntryRecoveryKey("school-a", "2026", "2", "subject", "subject-a"))
       .not.toBe(pbdEntryRecoveryKey("school-a", "2026", "1", "subject", "subject-a"));
     expect(pbdEntryRecoveryKey("school-b", "2026", "1", "subject", "subject-a"))
+      .not.toBe(pbdEntryRecoveryKey("school-a", "2026", "1", "subject", "subject-a"));
+  });
+
+  it("keeps the legacy subject-only recovery key available for rollout migration", () => {
+    expect(legacySubjectEntryRecoveryKey("school-a", "2026", "1", "subject-a")).toBe("pbd-subject-entry:school-a:2026:1:subject-a");
+    expect(legacySubjectEntryRecoveryKey("school-a", "2026", "1", "subject-a"))
       .not.toBe(pbdEntryRecoveryKey("school-a", "2026", "1", "subject", "subject-a"));
   });
 
@@ -149,6 +156,12 @@ describe("PBD entry clipboard parsing", () => {
     expect(parseEntryPaste("+2")).toEqual({ ok: false, reason: "values" });
     expect(parseEntryPaste("1\tabc")).toEqual({ ok: false, reason: "values" });
     expect(parseEntryPaste("1e2")).toEqual({ ok: false, reason: "values" });
+  });
+
+  it("rejects counts above the database cap without touching grid state", () => {
+    expect(parseEntryPaste("3001\t0")).toEqual({ ok: false, reason: "values" });
+    expect(parseEntryPaste("1\n99999")).toEqual({ ok: false, reason: "values" });
+    expect(parseEntryPaste("3000\t0")).toEqual({ ok: true, grid: [["3000", "0"]] });
   });
 
   it("rejects grids wider than the TP columns and empty payloads", () => {
