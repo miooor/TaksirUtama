@@ -99,6 +99,9 @@ async function loadAllPbdRecords(school: SchoolContext, period: PbdPeriod, subje
 export async function getAllPbdRecords(school: SchoolContext, period: PbdPeriod, subjects?: string[]) {
   const databaseRecords = await databaseRecordsFor(school, period);
   if (databaseRecords) return subjects ? databaseRecords.filter((record) => subjects.includes(record.subjectCode)) : databaseRecords;
+  // No database available: degrade to empty rather than the deprecated workbook path.
+  if (!isDatabaseConfigured()) return [];
+  // Database configured but this school still reads PBD from a workbook (legacy migration).
   if (subjects) return loadAllPbdRecords(school, period, subjects);
   return unstable_cache(
     () => loadAllPbdRecords(school, period),
@@ -121,6 +124,8 @@ export async function getAllPbdInterventions(school: SchoolContext, period: PbdP
       return { entries: entries.filter((entry) => entry.active !== false), issues: [] };
     }
   }
+  // No database available: degrade to empty rather than the deprecated workbook path.
+  if (!isDatabaseConfigured()) return { entries: [], issues: [] };
   return unstable_cache(
     () => loadAllPbdInterventions(school, period),
     ["all-pbd-interventions", ...pbdCacheIdentity(school, period)],
