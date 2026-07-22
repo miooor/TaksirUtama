@@ -7,14 +7,14 @@ import type { DatabasePbdSetup } from "@/lib/db/pbd";
 import type { SchoolRegistry } from "@/types/registry";
 import { SchoolRosterWorkspace } from "@/components/school/SchoolRosterWorkspace";
 import { pbdSetupCounts, type PbdSetupView } from "@/lib/pbd/setupWorkflow";
-import { archivePbdSetupAction, assignPbdSubjectAction, createPbdClassAction, createPbdSubjectAction, deletePbdSetupAction, updatePbdClassEnrollmentAction, type PbdActionState } from "@/app/pbd/entry/actions";
+import { archivePbdSetupAction, assignPbdSubjectAction, createPbdClassAction, createPbdSubjectAction, deletePbdSetupAction, updatePbdClassEnrollmentAction, updatePbdClassTeacherAction, type PbdActionState } from "@/app/pbd/entry/actions";
 
 const initialState: PbdActionState = {};
 function Message({ state }: { state: PbdActionState }) { return state.error ? <p className="mt-2 text-sm font-medium text-rose-700" role="alert">{state.error}</p> : state.success ? <p className="mt-2 text-sm font-medium text-teal-800" role="status">{state.success}</p> : null; }
 
 function AddClass({ year }: { year: string }) {
   const [state, action, pending] = useActionState(createPbdClassAction, initialState);
-  return <form action={action} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><input name="year" type="hidden" value={year} /><label className="text-sm font-medium">Nama kelas<input name="name" required className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" placeholder="1 Cemerlang" /></label><label className="text-sm font-medium">Peringkat<select name="levelKind" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2"><option value="tahun">Tahun</option><option value="tingkatan">Tingkatan</option><option value="peralihan">Peralihan</option></select></label><label className="text-sm font-medium">Tahun/Tingkatan<input name="levelNumber" type="number" min="1" max="6" defaultValue="1" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" /></label><label className="text-sm font-medium">Jumlah murid<input name="enrolledCount" required type="number" min="0" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" /></label><button disabled={pending} className="self-end rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">Tambah kelas</button><div className="sm:col-span-2 xl:col-span-5"><Message state={state} /></div></form>;
+  return <form action={action} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"><input name="year" type="hidden" value={year} /><label className="text-sm font-medium">Nama kelas<input name="name" required className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" placeholder="1 Cemerlang" /></label><label className="text-sm font-medium">Peringkat<select name="levelKind" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2"><option value="tahun">Tahun</option><option value="tingkatan">Tingkatan</option><option value="peralihan">Peralihan</option></select></label><label className="text-sm font-medium">Tahun/Tingkatan<input name="levelNumber" type="number" min="1" max="6" defaultValue="1" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" /></label><label className="text-sm font-medium">Jumlah murid<input name="enrolledCount" required type="number" min="0" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" /></label><label className="text-sm font-medium sm:col-span-2 xl:col-span-1">Nama guru kelas<input name="teacherName" className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2" placeholder="Pilihan" /></label><button disabled={pending} className="self-end rounded-md bg-teal-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">Tambah kelas</button><div className="sm:col-span-2 xl:col-span-6"><Message state={state} /></div></form>;
 }
 
 function AddSubject() {
@@ -44,13 +44,18 @@ function EnrollmentForm({ id, enrolledCount }: { id: string; enrolledCount: numb
   return <form action={action} className="flex items-end gap-2"><input type="hidden" name="classId" value={id} /><label className="text-xs font-medium text-slate-600">Jumlah murid<input name="enrolledCount" defaultValue={enrolledCount} type="number" min="0" className="mt-1 block w-24 rounded-md border border-stone-300 px-2 py-1.5 text-sm" /></label><button disabled={pending} className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50">Simpan</button><Message state={state} /></form>;
 }
 
+function TeacherNameForm({ id, teacherName }: { id: string; teacherName: string | null }) {
+  const [state, action, pending] = useActionState(updatePbdClassTeacherAction, initialState);
+  return <form action={action} className="flex items-end gap-2"><input type="hidden" name="classId" value={id} /><label className="text-xs font-medium text-slate-600">Guru kelas<input name="teacherName" defaultValue={teacherName ?? ""} className="mt-1 block w-44 rounded-md border border-stone-300 px-2 py-1.5 text-sm" placeholder="Nama guru" /></label><button disabled={pending} className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium disabled:opacity-50">Simpan</button><Message state={state} /></form>;
+}
+
 function Archived({ label, count, children }: { label: string; count: number; children: React.ReactNode }) {
   if (!count) return null;
   return <details className="border-t border-stone-200"><summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700 sm:px-5">{label} ({count})</summary><div className="divide-y divide-stone-200 border-t border-stone-200 bg-stone-50/70">{children}</div></details>;
 }
 
 function ClassRow({ item }: { item: DatabasePbdSetup["classes"][number] }) {
-  return <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"><div className="min-w-0"><p className="font-medium text-slate-950">{item.name}</p><p className="text-sm text-slate-600">{item.enrolledCount} murid</p></div><div className="flex flex-wrap items-end gap-2">{item.active ? <EnrollmentForm id={item.id} enrolledCount={item.enrolledCount} /> : null}<ArchiveButton id={item.id} kind="class" active={item.active} />{item.canDelete ? <DeleteButton id={item.id} kind="class" name={item.name} /> : null}</div></div>;
+  return <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"><div className="min-w-0"><p className="font-medium text-slate-950">{item.name}</p><p className="text-sm text-slate-600">{item.enrolledCount} murid · Guru: {item.teacherName || "Belum ditetapkan"}</p></div><div className="flex flex-wrap items-end gap-2">{item.active ? <TeacherNameForm id={item.id} teacherName={item.teacherName} /> : null}{item.active ? <EnrollmentForm id={item.id} enrolledCount={item.enrolledCount} /> : null}<ArchiveButton id={item.id} kind="class" active={item.active} />{item.canDelete ? <DeleteButton id={item.id} kind="class" name={item.name} /> : null}</div></div>;
 }
 
 function SubjectRow({ item }: { item: DatabasePbdSetup["subjects"][number] }) {

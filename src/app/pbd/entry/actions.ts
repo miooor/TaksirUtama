@@ -13,6 +13,7 @@ import {
   saveDatabasePbdSubjectEntries,
   setDatabasePbdSetupArchived,
   updateDatabasePbdClassEnrollment,
+  updateDatabasePbdClassTeacher,
 } from "@/lib/db/pbd";
 
 export type PbdActionState = { error?: string; success?: string; changedCount?: number; savedAt?: string; semester?: "1" | "2" };
@@ -168,6 +169,15 @@ export async function updatePbdClassEnrollmentAction(_: PbdActionState, formData
     await updateDatabasePbdClassEnrollment(context, Object.fromEntries(formData));
     refresh();
     return { success: "Jumlah murid kelas dan semua draf aktif telah diselaraskan." };
+  } catch (error) { return { error: message(error) }; }
+}
+
+export async function updatePbdClassTeacherAction(_: PbdActionState, formData: FormData): Promise<PbdActionState> {
+  try {
+    const context = await requireRole("school_admin", "platform_admin");
+    await updateDatabasePbdClassTeacher(context, Object.fromEntries(formData));
+    refresh();
+    return { success: "Nama guru kelas disimpan." };
   } catch (error) { return { error: message(error) }; }
 }
 

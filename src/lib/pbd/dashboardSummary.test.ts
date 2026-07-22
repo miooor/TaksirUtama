@@ -34,7 +34,7 @@ function setup(rows: Row[], overrides: Partial<DatabasePbdSetup> = {}): Database
     schoolId: "school-1",
     yearId: "year-1",
     periodId: "period-1",
-    classes: [{ id: "class-1", name: "1 Cemerlang", enrolledCount: 30, levelKind: "tahun", levelNumber: 1, active: true, canDelete: false }],
+    classes: [{ id: "class-1", name: "1 Cemerlang", enrolledCount: 30, levelKind: "tahun", levelNumber: 1, teacherName: null, active: true, canDelete: false }],
     subjects: [{ id: "subject-1", code: "BM", name: "Bahasa Melayu", active: true, canDelete: false }],
     rows,
     ...overrides,
@@ -91,10 +91,10 @@ describe("dashboard PBD summary", () => {
       { ...baseRow, classSubjectId: "assignment-4", classId: "class-4", className: "4 Cerdik", entry: entry("final", [0, 0, 8, 8, 8, 0, 0], 24) },
     ];
     const classes = [
-      { id: "class-1", name: "1 Cemerlang", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 1, active: true, canDelete: false },
-      { id: "class-2", name: "2 Bestari", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 2, active: true, canDelete: false },
-      { id: "class-3", name: "3 Angsana", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 3, active: true, canDelete: false },
-      { id: "class-4", name: "4 Cerdik", enrolledCount: 24, levelKind: "tahun" as const, levelNumber: 4, active: true, canDelete: false },
+      { id: "class-1", name: "1 Cemerlang", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 1, teacherName: null, active: true, canDelete: false },
+      { id: "class-2", name: "2 Bestari", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 2, teacherName: null, active: true, canDelete: false },
+      { id: "class-3", name: "3 Angsana", enrolledCount: 30, levelKind: "tahun" as const, levelNumber: 3, teacherName: null, active: true, canDelete: false },
+      { id: "class-4", name: "4 Cerdik", enrolledCount: 24, levelKind: "tahun" as const, levelNumber: 4, teacherName: null, active: true, canDelete: false },
     ];
     const summary = summarizeDashboardPbd(setup(rows, { classes }));
     expect(summary.classesNeedingAction.map((item) => item.name)).toEqual(["2 Bestari", "3 Angsana", "1 Cemerlang"]);

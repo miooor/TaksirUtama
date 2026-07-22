@@ -10,7 +10,7 @@ export type DatabasePbdSetup = {
   schoolId: string;
   yearId: string | null;
   periodId: string | null;
-  classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null; active: boolean; canDelete: boolean }>;
+  classes: Array<{ id: string; name: string; enrolledCount: number; levelKind: "tahun" | "tingkatan" | "peralihan"; levelNumber: number | null; teacherName: string | null; active: boolean; canDelete: boolean }>;
   subjects: Array<{ id: string; code: string; name: string; active: boolean; canDelete: boolean }>;
   rows: Array<{ classSubjectId: string; classId: string; subjectId: string; className: string; classLevelKind: "tahun" | "tingkatan" | "peralihan"; classLevelNumber: number | null; subjectCode: string; subjectName: string; enrolledCount: number; active: boolean; entry: DatabasePbdEntry | null }>;
 };
@@ -30,6 +30,7 @@ const classInput = z.object({
   levelKind: z.enum(["tahun", "tingkatan", "peralihan"]),
   levelNumber: z.coerce.number().int().min(1).max(6).nullable(),
   enrolledCount: z.coerce.number().int().min(0).max(3000),
+  teacherName: z.string().trim().max(120).optional().transform((value) => value || null),
 });
 
 const subjectInput = z.object({
@@ -93,6 +94,11 @@ const bulkSubjectEntryInput = z.object({
 const updateEnrollmentInput = z.object({
   classId: z.string().uuid(),
   enrolledCount: z.coerce.number().int().min(0).max(3000),
+});
+
+const updateTeacherInput = z.object({
+  classId: z.string().uuid(),
+  teacherName: z.string().trim().max(120).optional().transform((value) => value || null),
 });
 
 const archiveInput = z.object({ id: z.string().uuid(), kind: z.enum(["class", "subject", "assignment"]), restore: z.boolean().default(false) });
@@ -210,7 +216,7 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
   }
   const [classesRaw, subjectsRaw] = await Promise.all([
     yearId ? sql`
-      SELECT c.id, c.name, c.enrolled_count, c.level_kind, c.level_number, c.active,
+      SELECT c.id, c.name, c.enrolled_count, c.level_kind, c.level_number, c.teacher_name, c.active,
         NOT EXISTS (SELECT 1 FROM class_subjects cs WHERE cs.class_id = c.id AND cs.school_id = ${schoolId})
           AND NOT EXISTS (SELECT 1 FROM student_class_enrolments roster WHERE roster.class_id = c.id AND roster.school_id = ${schoolId})
           AND NOT EXISTS (SELECT 1 FROM audit_events event WHERE event.school_id = ${schoolId} AND event.resource_id = c.id) AS can_delete
@@ -224,7 +230,7 @@ export async function getDatabasePbdSetup(context: ActorContext, year: string, s
       FROM school_subjects s WHERE s.school_id = ${schoolId} ORDER BY s.active DESC, s.name
     `,
   ]);
-  const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
+  const classes = classesRaw.map((item) => ({ id: String(item.id), name: String(item.name), enrolledCount: Number(item.enrolled_count), levelKind: item.level_kind as DatabasePbdSetup["classes"][number]["levelKind"], levelNumber: item.level_number === null ? null : Number(item.level_number), teacherName: item.teacher_name === null || item.teacher_name === undefined ? null : String(item.teacher_name), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
   const subjects = subjectsRaw.map((item) => ({ id: String(item.id), code: String(item.code), name: String(item.name), active: Boolean(item.active), canDelete: Boolean(item.can_delete) }));
   const rowsRaw = periodId ? await sql`
     SELECT cs.id AS class_subject_id, c.id AS class_id, s.id AS subject_id, c.name AS class_name, c.level_kind, c.level_number, s.code AS subject_code, s.name AS subject_name, cs.active,
@@ -253,8 +259,8 @@ export async function createDatabasePbdClass(context: ActorContext, raw: unknown
   const yearId = `${schoolId}:${input.year}`;
   await sql.transaction((txn) => [
     txn`INSERT INTO academic_years (id, school_id, year) VALUES (${yearId}, ${schoolId}, ${input.year}) ON CONFLICT (school_id, year) DO NOTHING`,
-    txn`INSERT INTO school_classes (id, school_id, academic_year_id, name, level_kind, level_number, enrolled_count)
-      VALUES (${randomUUID()}, ${schoolId}, ${yearId}, ${input.name}, ${input.levelKind}, ${input.levelNumber}, ${input.enrolledCount})`,
+    txn`INSERT INTO school_classes (id, school_id, academic_year_id, name, level_kind, level_number, enrolled_count, teacher_name)
+      VALUES (${randomUUID()}, ${schoolId}, ${yearId}, ${input.name}, ${input.levelKind}, ${input.levelNumber}, ${input.enrolledCount}, ${input.teacherName})`,
     txn`UPDATE schools SET pbd_source_mode = 'database', updated_at = now() WHERE id = ${schoolId}`,
   ]);
 }
@@ -376,6 +382,15 @@ export async function updateDatabasePbdClassEnrollment(context: ActorContext, ra
         ${JSON.stringify({ enrolledCount: Number(draft.enrolled_count) })}::jsonb,
         ${JSON.stringify({ enrolledCount: input.enrolledCount })}::jsonb)`),
   ]);
+}
+
+export async function updateDatabasePbdClassTeacher(context: ActorContext, raw: unknown) {
+  const input = updateTeacherInput.parse(raw);
+  const sql = requireDatabase();
+  const schoolId = context.school.id;
+  const classes = await sql`SELECT id FROM school_classes WHERE id = ${input.classId} AND school_id = ${schoolId} LIMIT 1`;
+  if (!classes.length) throw new Error("Kelas tidak ditemui.");
+  await sql`UPDATE school_classes SET teacher_name = ${input.teacherName}, updated_at = now() WHERE id = ${input.classId} AND school_id = ${schoolId}`;
 }
 
 export async function setDatabasePbdSetupArchived(context: ActorContext, raw: unknown) {

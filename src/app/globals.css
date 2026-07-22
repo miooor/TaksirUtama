@@ -478,3 +478,37 @@
   background: var(--surface-inset);
   color: var(--text-primary);
 }
+
+/* ============================================================
+   Printable slip sheet: a slip is a preview of a physical
+   document, so it must stay light-on-white in EVERY theme.
+   The legacy `.dark .bg-white` / `.dark .text-slate-900` remaps
+   above would otherwise invert it in dark mode, so the slip uses
+   this dedicated class instead of the remapped utilities.
+   ============================================================ */
+.slip-sheet {
+  background-color: #ffffff;
+  color: #0f172a;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ============================================================
+   Print: force a light, chrome-free output so browser
+   "Save as PDF" / print produces clean light-mode documents.
+   ============================================================ */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  aside,
+  footer,
+  nav,
+  [data-print-hide] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+}
