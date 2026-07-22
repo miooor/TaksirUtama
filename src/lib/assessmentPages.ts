@@ -1,18 +1,19 @@
 import { notFound, redirect } from "next/navigation";
 import { requireSchoolContext } from "@/lib/auth";
+import { requireActorContext } from "@/lib/auth/actor";
+import type { SchoolContext } from "@/lib/config/schools";
 import { createPlaceholderAssessmentPeriod, listPeriodYears } from "@/lib/config/periods";
 import { resolveAssessmentPeriod } from "@/lib/config/periods";
+import type { AssessmentPeriod } from "@/lib/config/periods";
 import { isUasaDataAvailable } from "@/lib/config/uasaAvailability";
 
-export async function getAssessmentPageContext(params: Promise<{ year: string; assessment: string }>) {
-  const { year, assessment } = await params;
-  const school = await requireSchoolContext();
+function resolveAssessmentPagePeriod(school: SchoolContext, year: string, assessment: string): AssessmentPeriod {
   const period = resolveAssessmentPeriod(school.assessmentPeriods, year, assessment);
   if (period) {
     if (assessment === "uasa" && !isUasaDataAvailable(period)) {
       redirect(`/uasa?year=${year}`);
     }
-    return { school, period };
+    return period;
   }
   if ((assessment !== "upsa" && assessment !== "uasa") || !listPeriodYears(school.assessmentPeriods, school.pbdPeriods).includes(year)) {
     notFound();
@@ -20,7 +21,23 @@ export async function getAssessmentPageContext(params: Promise<{ year: string; a
   if (assessment === "uasa") {
     redirect(`/uasa?year=${year}`);
   }
-  return { school, period: createPlaceholderAssessmentPeriod(year, assessment) };
+  return createPlaceholderAssessmentPeriod(year, assessment);
+}
+
+export async function getAssessmentPageContext(params: Promise<{ year: string; assessment: string }>) {
+  const { year, assessment } = await params;
+  const school = await requireSchoolContext();
+  return { school, period: resolveAssessmentPagePeriod(school, year, assessment) };
+}
+
+/**
+ * Actor-context variant of getAssessmentPageContext for pages that use the
+ * DB-first hybrid fetchers (which require an ActorContext).
+ */
+export async function getAssessmentActorPageContext(params: Promise<{ year: string; assessment: string }>) {
+  const { year, assessment } = await params;
+  const context = await requireActorContext();
+  return { context, school: context.school, period: resolveAssessmentPagePeriod(context.school, year, assessment) };
 }
 
 export async function getAssessmentPagePeriod(params: Promise<{ year: string; assessment: string }>) {

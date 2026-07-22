@@ -8,9 +8,9 @@ import { StackedBarChart } from "@/components/shared/StackedBarChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, TableShell, TD, TH, THead, TRow } from "@/components/ui/table";
-import { getAssessmentClassResult } from "@/lib/upsa/data";
+import { getAssessmentClassResultHybrid } from "@/lib/upsa/data";
 import { calculateUpsaClassAnalysis } from "@/lib/upsa/calculateUpsaClassAnalysis";
-import { assessmentApiBasePath, assessmentClassPath, getAssessmentPageContext } from "@/lib/assessmentPages";
+import { assessmentApiBasePath, assessmentClassPath, getAssessmentActorPageContext } from "@/lib/assessmentPages";
 import { assessmentLabel } from "@/lib/config/periods";
 
 const gradeOrder = ["A", "B", "C", "D", "E", "F"];
@@ -29,8 +29,8 @@ export default async function AssessmentAnalysisPage({
   params: Promise<{ year: string; assessment: string; className: string }>;
 }) {
   const { className } = await params;
-  const { school, period } = await getAssessmentPageContext(params);
-  const result = await getAssessmentClassResult(school, period, decodeURIComponent(className));
+  const { context, period } = await getAssessmentActorPageContext(params);
+  const result = await getAssessmentClassResultHybrid(context, period, decodeURIComponent(className));
   const analysis = calculateUpsaClassAnalysis(result);
   const classPath = assessmentClassPath(period, result.className);
   const apiBase = assessmentApiBasePath(period);

@@ -9,20 +9,20 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { UpsaReadinessPanel } from "@/components/upsa/UpsaReadinessPanel";
 import { AssessmentYearClassGradeReport } from "@/components/upsa/AssessmentYearClassGradeReport";
 import { HeatmapTable } from "@/components/shared/HeatmapTable";
-import { getAllAssessmentClassResults } from "@/lib/upsa/data";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { calculateUpsaCompletionHeatmap, calculateUpsaReadiness } from "@/lib/upsa/readiness";
 import { getLanguage, text } from "@/lib/i18n";
-import { assessmentBasePath, assessmentClassPath, assessmentYearPath, getAssessmentPageContext } from "@/lib/assessmentPages";
+import { assessmentBasePath, assessmentClassPath, assessmentYearPath, getAssessmentActorPageContext } from "@/lib/assessmentPages";
 import { assessmentLabel } from "@/lib/config/periods";
 import { calculateUpsaYearAnalysis } from "@/lib/upsa/calculateUpsaYearAnalysis";
 import type { UpsaClassResult } from "@/types/upsa";
 
 export default async function AssessmentClassesPage({ params }: { params: Promise<{ year: string; assessment: string }> }) {
-  const { school, period } = await getAssessmentPageContext(params);
+  const { context, school, period } = await getAssessmentActorPageContext(params);
   let results: UpsaClassResult[] = [];
   let dataError = false;
   try {
-    results = await getAllAssessmentClassResults(school, period);
+    results = await getAllAssessmentClassResultsHybrid(context, period);
   } catch (error) {
     dataError = true;
     console.error("assessment_classes_load_failed", { schoolId: school.id, year: period.year, assessment: period.assessment, error });

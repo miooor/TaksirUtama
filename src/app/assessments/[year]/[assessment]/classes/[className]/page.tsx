@@ -7,10 +7,10 @@ import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UpsaStudentTable } from "@/components/upsa/UpsaStudentTable";
-import { getAssessmentClassResult } from "@/lib/upsa/data";
+import { getAssessmentClassResultHybrid } from "@/lib/upsa/data";
 import { calculateUpsaClassAnalysis } from "@/lib/upsa/calculateUpsaClassAnalysis";
 import { getLanguage, text } from "@/lib/i18n";
-import { assessmentApiBasePath, assessmentClassPath, getAssessmentPageContext } from "@/lib/assessmentPages";
+import { assessmentApiBasePath, assessmentClassPath, getAssessmentActorPageContext } from "@/lib/assessmentPages";
 import { assessmentLabel } from "@/lib/config/periods";
 
 export default async function AssessmentClassPage({
@@ -19,8 +19,8 @@ export default async function AssessmentClassPage({
   params: Promise<{ year: string; assessment: string; className: string }>;
 }) {
   const { className } = await params;
-  const { school, period } = await getAssessmentPageContext(params);
-  const result = await getAssessmentClassResult(school, period, decodeURIComponent(className));
+  const { context, school, period } = await getAssessmentActorPageContext(params);
+  const result = await getAssessmentClassResultHybrid(context, period, decodeURIComponent(className));
   const analysis = calculateUpsaClassAnalysis(result);
   const language = await getLanguage();
   const classPath = assessmentClassPath(period, result.className);

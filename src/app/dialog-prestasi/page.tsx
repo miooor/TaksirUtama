@@ -6,11 +6,12 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
-import { requireSchoolContext } from "@/lib/auth";
-import { listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { requireActorContext } from "@/lib/auth/actor";
+import { createPlaceholderAssessmentPeriod, listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { isDatabaseConfigured } from "@/lib/db/client";
 import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
 import { getAllPbdInterventions, listPbdSubjectTabs } from "@/lib/pbd/data";
-import { getAllAssessmentClassResults } from "@/lib/upsa/data";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { getLanguage, text } from "@/lib/i18n";
 import { interventionPupilKey } from "@/lib/pbd/intervention";
 import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
@@ -34,7 +35,8 @@ const subjectNames: Record<string, string> = {
 
 export default async function DialogPrestasiPage({ searchParams }: { searchParams: Promise<{ year?: string; semester?: string; assessment?: string }> }) {
   const language = await getLanguage();
-  const school = await requireSchoolContext();
+  const context = await requireActorContext();
+  const school = context.school;
   const { assessmentPeriods, defaultPbdPeriod, pbdPeriods } = school;
   const params = await searchParams;
   const requestedYear = params.year;
@@ -44,7 +46,12 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
   const year = requestedYear && years.includes(requestedYear) ? requestedYear : defaultPbdPeriod?.year ?? years[0] ?? "2026";
   const selection = resolveInterventionQueryContext(school, { year, semester: params.semester });
   const pbdPeriod = resolvePbdPeriod(pbdPeriods, year) ? selection.period : null;
-  const assessmentPeriod = resolveAssessmentPeriod(assessmentPeriods, year, assessment);
+  // In database-primary mode a school may have assessment_results rows without
+  // a workbook-backed assessment period; fall back to a placeholder period so
+  // the assessment comparison is still built from the database (mirrors the
+  // insights and assessment-page paths).
+  const assessmentPeriod = resolveAssessmentPeriod(assessmentPeriods, year, assessment)
+    ?? (isDatabaseConfigured() ? createPlaceholderAssessmentPeriod(year, assessment) : null);
 
   if (!pbdPeriod) {
     return (
@@ -57,7 +64,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
   const [subjects, interventionData, assessmentResults] = await Promise.all([
     listPbdSubjectTabs(school, pbdPeriod),
     getAllPbdInterventions(school, pbdPeriod),
-    assessmentPeriod ? getAllAssessmentClassResults(school, assessmentPeriod) : Promise.resolve([]),
+    assessmentPeriod ? getAllAssessmentClassResultsHybrid(context, assessmentPeriod).catch(() => []) : Promise.resolve([]),
   ]);
   const assessmentCodes = new Set(assessmentResults.flatMap((result) => result.students.flatMap((student) => student.subjects.map((subject) => subject.subjectCode))));
   const sortedSubjects = [...subjects].sort((a, b) => a.localeCompare(b, "ms"));

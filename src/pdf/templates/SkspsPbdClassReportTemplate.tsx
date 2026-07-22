@@ -1,7 +1,18 @@
 import { Document, Image as PdfImage, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import type { PbdClassAnalysis, PbdSubjectClassRecord } from "@/types/pbd";
+import type { PbdClassAnalysis, PbdSubjectClassRecord, TpBand } from "@/types/pbd";
 import { pdfAssetSrc } from "@/pdf/templates/shared";
 import type { SchoolPublicProfile } from "@/lib/config/schools";
+import { buildPbdTpSegments } from "@/lib/pdf/reportData";
+
+const bands: TpBand[] = ["TP1", "TP2", "TP3", "TP4", "TP5", "TP6"];
+const bandColors: Record<TpBand, string> = {
+  TP1: "#be123c",
+  TP2: "#ea580c",
+  TP3: "#f59e0b",
+  TP4: "#0ea5e9",
+  TP5: "#0f766e",
+  TP6: "#059669",
+};
 
 const styles = StyleSheet.create({
   page: { padding: 28, fontSize: 8.5, color: "#172033" },
@@ -20,6 +31,13 @@ const styles = StyleSheet.create({
   chartLabel: { width: "18%", fontWeight: 700 },
   chartTrack: { width: "54%", height: 9, backgroundColor: "#e2e8f0" },
   chartValue: { width: "28%", textAlign: "right" },
+  stackedTrack: { width: "54%", height: 10, backgroundColor: "#e2e8f0", flexDirection: "row" },
+  segmentText: { color: "#ffffff", fontSize: 6, textAlign: "center" },
+  compactLabels: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginLeft: "18%", marginBottom: 4 },
+  compactLabel: { fontSize: 6.5, color: "#475569" },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 3 },
+  swatch: { width: 8, height: 8 },
   wide: { width: "19%" },
   col: { width: "10%" },
   mid: { width: "13%" },
@@ -51,6 +69,31 @@ function SubjectRiskBar({ record }: { record: PbdSubjectClassRecord }) {
   );
 }
 
+function ClassTpStackedBar({ record }: { record: PbdSubjectClassRecord }) {
+  const total = Math.max(Object.values(record.tpCounts).reduce((sum, value) => sum + value, 0), 1);
+  const segments = buildPbdTpSegments(record.tpCounts, total);
+  return (
+    <View>
+      <View style={styles.chartRow}>
+        <Text style={styles.chartLabel}>{record.subjectCode}</Text>
+        <View style={styles.stackedTrack}>
+          {segments.map((segment) => (
+            <View key={segment.band} style={{ width: `${segment.percentage}%`, backgroundColor: bandColors[segment.band], height: 10 }}>
+              {segment.showInside ? <Text style={styles.segmentText}>{segment.count}</Text> : null}
+            </View>
+          ))}
+        </View>
+        <Text style={styles.chartValue}>
+          {record.lowAchievementCount} TP1+TP2 | {record.highAchievementCount} TP5+TP6
+        </Text>
+      </View>
+      <View style={styles.compactLabels}>
+        {segments.map((segment) => <Text key={segment.band} style={styles.compactLabel}>{segment.label}</Text>)}
+      </View>
+    </View>
+  );
+}
+
 export function SkspsPbdClassReportTemplate({ analysis, school }: { analysis: PbdClassAnalysis; school: SchoolPublicProfile }) {
   const recordsByRisk = [...analysis.subjectRecords].sort((a, b) => b.lowAchievementCount - a.lowAchievementCount || a.subjectCode.localeCompare(b.subjectCode, "ms"));
   const pupils = totalPupils(analysis.subjectRecords);
@@ -74,6 +117,16 @@ export function SkspsPbdClassReportTemplate({ analysis, school }: { analysis: Pb
           <View style={styles.metric}><Text style={styles.metricLabel}>TP1+TP2</Text><Text style={styles.metricValue}>{low}</Text></View>
           <View style={styles.metric}><Text style={styles.metricLabel}>TP5+TP6</Text><Text style={styles.metricValue}>{high}</Text></View>
           <View style={styles.metric}><Text style={styles.metricLabel}>Belum Ditaksir</Text><Text style={styles.metricValue}>{notAssessed}</Text></View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Taburan TP Mengikut Subjek</Text>
+          {recordsByRisk.map((record) => <ClassTpStackedBar key={record.subjectCode} record={record} />)}
+          <View style={styles.legend}>
+            {bands.map((band) => (
+              <View key={band} style={styles.legendItem}><View style={[styles.swatch, { backgroundColor: bandColors[band] }]} /><Text>{band}</Text></View>
+            ))}
+          </View>
         </View>
 
         <View style={styles.section}>

@@ -1,8 +1,8 @@
 import { AppShell } from "@/components/shared/AppShell";
 import { ExportMeta } from "@/components/shared/ExportMeta";
 import { UpsaSlipPreview } from "@/components/upsa/UpsaSlipPreview";
-import { getAssessmentClassResult } from "@/lib/upsa/data";
-import { assessmentApiBasePath, getAssessmentPageContext } from "@/lib/assessmentPages";
+import { getAssessmentClassResultHybrid } from "@/lib/upsa/data";
+import { assessmentApiBasePath, getAssessmentActorPageContext } from "@/lib/assessmentPages";
 
 export default async function AssessmentSlipsPage({
   params,
@@ -10,8 +10,8 @@ export default async function AssessmentSlipsPage({
   params: Promise<{ year: string; assessment: string; className: string }>;
 }) {
   const { className } = await params;
-  const { school, period } = await getAssessmentPageContext(params);
-  const result = await getAssessmentClassResult(school, period, decodeURIComponent(className));
+  const { context, school, period } = await getAssessmentActorPageContext(params);
+  const result = await getAssessmentClassResultHybrid(context, period, decodeURIComponent(className));
   return (
     <AppShell>
       <div className="flex flex-col gap-4 border-b border-border-default pb-6 md:flex-row md:items-end md:justify-between">

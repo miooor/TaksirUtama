@@ -7,14 +7,19 @@ import { MetricCard } from "@/components/shared/MetricCard";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { getAllPbdInterventions, getAllPbdRecords } from "@/lib/pbd/data";
-import { getAllAssessmentClassResults } from "@/lib/upsa/data";
-import { requireSchoolContext } from "@/lib/auth";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
+import { requireActorContext } from "@/lib/auth/actor";
+import { isDatabaseConfigured } from "@/lib/db/client";
+import { createPlaceholderAssessmentPeriod } from "@/lib/config/periods";
 import { DataSourceError } from "@/lib/dataSourceError";
 import { buildDialogInsightBriefs, buildDialogInsightOverview, selectDialogInsightBrief } from "@/lib/dialog/insightBrief";
 import { formatNumber, formatPercent } from "@/lib/dialog/format";
 import { getLanguage, text } from "@/lib/i18n";
 import type { DialogInsightBrief, DialogInsightFinding, DialogInsightOverview } from "@/types/dialog";
+import type { UpsaClassResult } from "@/types/upsa";
+import type { PbdSubjectClassRecord } from "@/types/pbd";
 import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
+import { Alert } from "@/components/ui/alert";
 
 type SearchParams = {
   subject?: string;
@@ -57,26 +62,54 @@ function upsaPercent(applicable: boolean, value: number | null) {
   return applicable ? formatPercent(value) : "N/A";
 }
 
+/**
+ * Fetch a data source independently so that a single failing source degrades
+ * gracefully to an empty collection instead of crashing the whole page.
+ */
+async function safeSource<T>(fetch: () => Promise<T>, fallback: T): Promise<{ data: T; failed: boolean }> {
+  try {
+    return { data: await fetch(), failed: false };
+  } catch {
+    return { data: fallback, failed: true };
+  }
+}
+
 export default async function SchoolInsightsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
   const language = await getLanguage();
-  const school = await requireSchoolContext();
-  if (!school.defaultUpsaPeriod || !school.defaultPbdPeriod) {
-    throw new DataSourceError("workbook_inaccessible", "UPSA and PBD must be configured before insights are available.", "upsa");
-  }
+  const context = await requireActorContext();
+  const school = context.school;
+  const databaseConfigured = isDatabaseConfigured();
   const params = await searchParams;
   const { subject, year, className } = params;
   const selection = resolveInterventionQueryContext(school, { year, semester: params.semester, level: params.level });
   const selectedYear = selection.level ?? parseYear(year);
   const selectedClass = className ?? null;
-  const [upsaResults, pbdRecords, interventionData] = await Promise.all([
-    getAllAssessmentClassResults(school, school.defaultUpsaPeriod),
-    getAllPbdRecords(school, selection.period),
-    getAllPbdInterventions(school, selection.period),
+
+  // UPSA period: prefer the configured default; when the database is the
+  // primary source a placeholder period is enough (no workbook required).
+  const upsaPeriod = school.defaultUpsaPeriod
+    ?? (databaseConfigured ? createPlaceholderAssessmentPeriod(selection.year, "upsa") : null);
+  if (!upsaPeriod || !school.defaultPbdPeriod) {
+    throw new DataSourceError("workbook_inaccessible", "UPSA and PBD must be configured before insights are available.", "upsa");
+  }
+
+  const [upsaSource, pbdSource, interventionSource] = await Promise.all([
+    safeSource(() => getAllAssessmentClassResultsHybrid(context, upsaPeriod), [] as UpsaClassResult[]),
+    safeSource(() => getAllPbdRecords(school, selection.period), [] as PbdSubjectClassRecord[]),
+    safeSource(() => getAllPbdInterventions(school, selection.period), { entries: [], issues: [] }),
   ]);
+  const upsaResults = upsaSource.data;
+  const pbdRecords = pbdSource.data;
+  const interventionData = interventionSource.data;
+  const degradedSources = [
+    upsaSource.failed ? "UPSA" : null,
+    pbdSource.failed ? "PBD" : null,
+    interventionSource.failed ? "Intervensi" : null,
+  ].filter((item): item is string => item !== null);
   const allBriefs = buildDialogInsightBriefs({
     upsaResults,
     pbdRecords,
@@ -117,6 +150,12 @@ export default async function SchoolInsightsPage({
           </Link>
         ) : null}
       />
+
+      {degradedSources.length ? (
+        <Alert variant="warning" title="Sebahagian data tidak dapat dimuatkan" className="mt-6">
+          Sumber {degradedSources.join(", ")} tidak tersedia buat sementara waktu. Paparan di bawah menggunakan data yang berjaya dimuatkan sahaja.
+        </Alert>
+      ) : null}
 
       <section className="mt-6 grid gap-3 rounded-xl border border-border-default bg-surface-card p-4 shadow-card md:grid-cols-[1fr_1fr_1fr_auto]">
         <form className="contents">
