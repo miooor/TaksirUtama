@@ -1,6 +1,7 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { requireActorContext } from "@/lib/auth/actor";
-import { resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { createPlaceholderAssessmentPeriod, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { isDatabaseConfigured } from "@/lib/db/client";
 import { buildDialogPrestasiUpsaSubjectReport } from "@/lib/dialogPrestasi/reportData";
 import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
 import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
@@ -13,7 +14,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ year: stri
   const school = context.school;
   const { assessmentPeriods, pbdPeriods } = school;
   const pbdPeriod = resolvePbdPeriod(pbdPeriods, year);
-  const upsaPeriod = resolveAssessmentPeriod(assessmentPeriods, year, "upsa");
+  const upsaPeriod = resolveAssessmentPeriod(assessmentPeriods, year, "upsa")
+    ?? (isDatabaseConfigured() ? createPlaceholderAssessmentPeriod(year, "upsa") : null);
   if (!pbdPeriod || !upsaPeriod) return new Response("Tempoh laporan tidak tersedia.", { status: 404 });
 
   const results = await getAllAssessmentClassResultsHybrid(context, upsaPeriod);

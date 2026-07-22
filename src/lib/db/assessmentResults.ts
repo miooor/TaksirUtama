@@ -3,6 +3,7 @@ import type { ActorContext } from "@/lib/auth/actor";
 import type { AssessmentPeriod } from "@/lib/config/periods";
 import { getDatabase, isDatabaseConfigured } from "@/lib/db/client";
 import { subjectDisplayName, type SchoolSubjectRecord } from "@/lib/subjects";
+import { getAbsentUpsaSubjectCodes, getMissingUpsaSubjectCodes } from "@/lib/upsa/subjectPolicy";
 import type { SchoolRegistry } from "@/types/registry";
 import type { UpsaClassResult, UpsaStudentResult, UpsaSubjectResult } from "@/types/upsa";
 
@@ -56,6 +57,63 @@ async function loadSchoolSubjects(schoolId: string): Promise<SchoolSubjectRecord
     aliases: Array.isArray(row.aliases_json) ? (row.aliases_json as string[]) : [],
     active: Boolean(row.active),
   }));
+}
+
+/**
+ * Load the active subject codes assigned to each class (class_subjects).
+ * Used to hydrate partial DB snapshots so that subjects which have no
+ * assessment_results rows yet are still represented as "missing".
+ */
+async function loadExpectedSubjectCodesByClass(schoolId: string): Promise<Map<string, string[]>> {
+  if (!isDatabaseConfigured()) return new Map();
+  const sql = getDatabase();
+  const rows = await sql`
+    SELECT cs.class_id, s.code
+    FROM class_subjects cs
+    JOIN school_subjects s ON s.id = cs.subject_id AND s.school_id = ${schoolId}
+    WHERE cs.school_id = ${schoolId} AND cs.active = true AND s.active = true
+    ORDER BY cs.class_id, s.code
+  `;
+  const byClass = new Map<string, string[]>();
+  for (const row of rows) {
+    const classId = String(row.class_id);
+    const list = byClass.get(classId) ?? [];
+    list.push(String(row.code));
+    byClass.set(classId, list);
+  }
+  return byClass;
+}
+
+/**
+ * Hydrate each student's subject list with the class's expected subjects that
+ * have no stored result yet (added as "missing"), then recompute the
+ * missing/absent subject lists using the same exclusive-choice-aware policy as
+ * the Google Sheets parser. This keeps readiness, the completion heatmap and
+ * the year/class analyses from treating unentered subjects as nonexistent.
+ */
+export function hydrateExpectedSubjects(
+  students: UpsaStudentResult[],
+  expectedCodes: string[],
+  schoolSubjects: SchoolSubjectRecord[],
+): void {
+  for (const student of students) {
+    if (expectedCodes.length > 0) {
+      const present = new Set(student.subjects.map((subject) => subject.subjectCode));
+      for (const code of expectedCodes) {
+        if (present.has(code)) continue;
+        student.subjects.push({
+          subjectCode: code,
+          subjectName: subjectDisplayName(code, schoolSubjects),
+          mark: null,
+          maxMark: 100,
+          grade: null,
+          status: "missing",
+        });
+      }
+    }
+    student.missingSubjects = getMissingUpsaSubjectCodes(student.subjects);
+    student.absentSubjects = getAbsentUpsaSubjectCodes(student.subjects);
+  }
 }
 
 /**
@@ -260,13 +318,16 @@ export async function buildClassResultFromDb(
       average,
       totalMarks: validSubjects.length ? totalMarks : null,
       validSubjectCount: validSubjects.length,
-      missingSubjects: subjectResults.filter((s) => s.status === "missing").map((s) => s.subjectCode),
-      absentSubjects: subjectResults.filter((s) => s.status === "absent").map((s) => s.subjectCode),
+      missingSubjects: [],
+      absentSubjects: [],
       studentId: entry.studentId,
       enrollmentId: entry.enrollmentId,
       matchStatus: "matched",
     });
   }
+
+  const expectedByClass = await loadExpectedSubjectCodesByClass(schoolId);
+  hydrateExpectedSubjects(students, expectedByClass.get(classId) ?? [], schoolSubjects);
 
   return { className, teacherName: "", students };
 }
@@ -295,6 +356,7 @@ export async function buildAllClassResultsFromDb(
   }
 
   const results: UpsaClassResult[] = [];
+  const expectedByClass = await loadExpectedSubjectCodesByClass(context.school.id);
   for (const [classId, rows] of byClass) {
     const className = classNameById.get(classId);
     if (!className || rows.length === 0) continue;
@@ -368,6 +430,8 @@ export async function buildAllClassResultsFromDb(
         matchStatus: "matched",
       });
     }
+
+    hydrateExpectedSubjects(students, expectedByClass.get(classId) ?? [], schoolSubjects);
 
     results.push({ className, teacherName: "", students });
   }

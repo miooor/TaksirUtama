@@ -7,7 +7,8 @@ import { Alert } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { requireActorContext } from "@/lib/auth/actor";
-import { listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { createPlaceholderAssessmentPeriod, listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { isDatabaseConfigured } from "@/lib/db/client";
 import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
 import { getAllPbdInterventions, listPbdSubjectTabs } from "@/lib/pbd/data";
 import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
@@ -45,7 +46,12 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
   const year = requestedYear && years.includes(requestedYear) ? requestedYear : defaultPbdPeriod?.year ?? years[0] ?? "2026";
   const selection = resolveInterventionQueryContext(school, { year, semester: params.semester });
   const pbdPeriod = resolvePbdPeriod(pbdPeriods, year) ? selection.period : null;
-  const assessmentPeriod = resolveAssessmentPeriod(assessmentPeriods, year, assessment);
+  // In database-primary mode a school may have assessment_results rows without
+  // a workbook-backed assessment period; fall back to a placeholder period so
+  // the assessment comparison is still built from the database (mirrors the
+  // insights and assessment-page paths).
+  const assessmentPeriod = resolveAssessmentPeriod(assessmentPeriods, year, assessment)
+    ?? (isDatabaseConfigured() ? createPlaceholderAssessmentPeriod(year, assessment) : null);
 
   if (!pbdPeriod) {
     return (

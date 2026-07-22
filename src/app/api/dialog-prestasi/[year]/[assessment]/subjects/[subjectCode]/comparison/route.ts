@@ -1,6 +1,7 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { requireActorContext } from "@/lib/auth/actor";
-import { resolveAssessmentPeriod, resolvePbdPeriod, type AssessmentType } from "@/lib/config/periods";
+import { createPlaceholderAssessmentPeriod, resolveAssessmentPeriod, resolvePbdPeriod, type AssessmentType } from "@/lib/config/periods";
+import { isDatabaseConfigured } from "@/lib/db/client";
 import { buildDialogPrestasiUpsaSubjectReport } from "@/lib/dialogPrestasi/reportData";
 import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
 import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
@@ -15,7 +16,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ year: stri
   if (assessment !== "upsa" && assessment !== "uasa") return new Response("Pentaksiran tidak sah.", { status: 404 });
   const assessmentType = assessment as AssessmentType;
   const pbdPeriod = resolvePbdPeriod(pbdPeriods, year);
-  const period = resolveAssessmentPeriod(assessmentPeriods, year, assessmentType);
+  const period = resolveAssessmentPeriod(assessmentPeriods, year, assessmentType)
+    ?? (isDatabaseConfigured() ? createPlaceholderAssessmentPeriod(year, assessmentType) : null);
   if (!pbdPeriod || !period) return new Response(`Tempoh ${assessment.toUpperCase()} tidak tersedia.`, { status: 404 });
 
   const results = await getAllAssessmentClassResultsHybrid(context, period);
