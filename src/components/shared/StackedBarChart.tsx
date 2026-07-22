@@ -20,18 +20,18 @@ export function StackedBarChart({
   valueLabel?: string;
 }) {
   return (
-    <section className="rounded-lg border bg-white p-5">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+      <h2 className="font-display text-lg font-semibold text-text-primary">{title}</h2>
       <div className="mt-4 space-y-4">
         {rows.map((row) => {
           const total = row.segments.reduce((sum, segment) => sum + segment.value, 0);
           return (
             <div key={row.label}>
               <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium">{row.label}</span>
-                <span className="text-slate-500">{valueLabel}: {total}</span>
+                <span className="font-medium text-text-primary">{row.label}</span>
+                <span className="tabular-nums text-text-muted">{valueLabel}: {total}</span>
               </div>
-              <div className="flex h-3 overflow-hidden rounded-full bg-stone-100">
+              <div className="flex h-3 overflow-hidden rounded-full bg-surface-sunken">
                 {row.segments.map((segment) => (
                   <span
                     key={segment.key}
@@ -46,7 +46,7 @@ export function StackedBarChart({
         })}
       </div>
       {rows[0] ? (
-        <div className="mt-5 flex flex-wrap gap-3 text-xs text-slate-600">
+        <div className="mt-5 flex flex-wrap gap-3 text-xs text-text-secondary">
           {rows[0].segments.map((segment) => (
             <span key={segment.key} className="inline-flex items-center gap-1.5">
               <span className={`h-2.5 w-2.5 rounded-full ${segment.colorClassName}`} />

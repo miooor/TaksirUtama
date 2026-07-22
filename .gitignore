@@ -29,6 +29,7 @@
 .DS_Store
 *.pem
 schools.private.json
+schools.local.json
 *.school-private.json
 *.school-credentials.json
 *.school-prepared.json

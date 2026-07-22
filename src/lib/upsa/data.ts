@@ -8,6 +8,7 @@ import type { SchoolRegistry } from "@/types/registry";
 import { DataSourceError } from "@/lib/dataSourceError";
 import { isDatabaseConfigured } from "@/lib/db/client";
 import { getSchoolRegistry } from "@/lib/db/schoolRegistry";
+import { buildAllClassResultsFromDb, buildClassResultFromDb, upsertAssessmentResults } from "@/lib/db/assessmentResults";
 import { fetchSheetValueRanges, fetchSheetValues } from "@/lib/googleSheets/fetchSheetValues";
 import { getPublicWorkbookSheetValues } from "@/lib/googleSheets/publicWorkbook";
 import { parseUpsaClassSheet } from "@/lib/upsa/parseUpsaClassSheet";
@@ -93,7 +94,21 @@ export async function getAssessmentClassResultWithRegistry(
   const registry = isDatabaseConfigured()
     ? await getSchoolRegistry(context, String(period.year))
     : undefined;
-  return getAssessmentClassResult(context.school, period, className, registry);
+  const result = await getAssessmentClassResult(context.school, period, className, registry);
+
+  // Fire-and-forget: persist matched results to Neon for future DB-first reads.
+  if (registry?.academicYearId && result.students.some((s) => s.matchStatus === "matched")) {
+    const targetEnrollment = registry.enrollments.find(
+      (e) => e.className === result.className && e.active,
+    );
+    if (targetEnrollment) {
+      upsertAssessmentResults(context, period, result, targetEnrollment.classId, registry.academicYearId).catch(() => {
+        // Silently ignore write failures — sheet data is still returned to the caller.
+      });
+    }
+  }
+
+  return result;
 }
 
 export async function getAllAssessmentClassResultsWithRegistry(
@@ -104,5 +119,70 @@ export async function getAllAssessmentClassResultsWithRegistry(
   const registry = isDatabaseConfigured()
     ? await getSchoolRegistry(context, String(period.year))
     : undefined;
-  return getAllAssessmentClassResults(context.school, period, classNames, registry);
+  const results = await getAllAssessmentClassResults(context.school, period, classNames, registry);
+
+  // Fire-and-forget: persist matched results to Neon for future DB-first reads.
+  if (registry?.academicYearId && results.length > 0) {
+    for (const result of results) {
+      if (!result.students.some((s) => s.matchStatus === "matched")) continue;
+      const targetEnrollment = registry.enrollments.find(
+        (e) => e.className === result.className && e.active,
+      );
+      if (targetEnrollment) {
+        upsertAssessmentResults(context, period, result, targetEnrollment.classId, registry.academicYearId).catch(() => {});
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * DB-first hybrid fetcher for a single class.
+ * Tries to read from assessment_results in Neon; falls back to Google Sheets
+ * (which also upserts to DB as a side effect for next time).
+ */
+export async function getAssessmentClassResultHybrid(
+  context: ActorContext,
+  period: AssessmentPeriod,
+  className?: string,
+) {
+  if (isDatabaseConfigured()) {
+    const registry = await getSchoolRegistry(context, String(period.year));
+    if (registry.academicYearId && className) {
+      const dbResult = await buildClassResultFromDb(context, period, className, registry.academicYearId, registry);
+      if (dbResult && dbResult.students.length > 0) return dbResult;
+    }
+  }
+  // Fall back to Sheets (which also upserts to DB as a side effect)
+  return getAssessmentClassResultWithRegistry(context, period, className);
+}
+
+/**
+ * DB-first hybrid fetcher for all classes in a period.
+ * Tries to read all results from Neon; falls back to Google Sheets.
+ */
+export async function getAllAssessmentClassResultsHybrid(
+  context: ActorContext,
+  period: AssessmentPeriod,
+  classNames?: string[],
+) {
+  if (isDatabaseConfigured()) {
+    const registry = await getSchoolRegistry(context, String(period.year));
+    if (registry.academicYearId) {
+      const dbResults = await buildAllClassResultsFromDb(context, period, registry.academicYearId, registry);
+      if (dbResults.length > 0) {
+        // If specific classNames were requested, filter to those
+        if (classNames) {
+          const requested = new Set(classNames);
+          const filtered = dbResults.filter((r) => requested.has(r.className));
+          if (filtered.length > 0) return filtered;
+        } else {
+          return dbResults;
+        }
+      }
+    }
+  }
+  // Fall back to Sheets (which also upserts to DB as a side effect)
+  return getAllAssessmentClassResultsWithRegistry(context, period, classNames);
 }

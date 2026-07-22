@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { School } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
 import { PbdClassTable } from "@/components/pbd/PbdClassTable";
 import { calculatePbdClassAnalysis } from "@/lib/pbd/analysis";
 import { getAllPbdRecords } from "@/lib/pbd/data";
@@ -23,9 +23,9 @@ export default async function PbdPeriodClassPage({ params, searchParams }: { par
         icon={School}
         actions={
           <>
-            <Link href={pbdSemesterHref(`${pbdBasePath(period)}/classes`, semester)} className="rounded-md border px-3 py-2">{text(language, { ms: "Semua kelas", en: "All classes" })}</Link>
-            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/csv`, semester)} className="rounded-md border px-3 py-2">{text(language, { ms: "Muat turun CSV", en: "Download CSV" })}</a>
-            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/pdf`, semester)} className="action-accent">{text(language, { ms: "Muat turun PDF", en: "Download PDF" })}</a>
+            <Button variant="outline" size="sm" href={pbdSemesterHref(`${pbdBasePath(period)}/classes`, semester)}>{text(language, { ms: "Semua kelas", en: "All classes" })}</Button>
+            <Button variant="outline" size="sm" href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/csv`, semester)}>{text(language, { ms: "Muat turun CSV", en: "Download CSV" })}</Button>
+            <a href={pbdSemesterHref(`${pbdApiBasePath(period)}/reports/classes/${encodeURIComponent(analysis.className)}/pdf`, semester)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-700 bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800">{text(language, { ms: "Muat turun PDF", en: "Download PDF" })}</a>
           </>
         }
       />

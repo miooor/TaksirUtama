@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataReadinessPanel } from "@/components/pbd/DataReadinessPanel";
 import { getAllPbdRecords } from "@/lib/pbd/data";
 import { calculatePbdReadiness } from "@/lib/pbd/readiness";
-import { getAllAssessmentClassResultsWithRegistry } from "@/lib/upsa/data";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { calculateUpsaReadiness, detectUnmatchedStudents } from "@/lib/upsa/readiness";
 import { requireActorContext } from "@/lib/auth/actor";
 import { assessmentClassPath } from "@/lib/assessmentPages";
@@ -21,7 +21,7 @@ export default async function ReadinessPage() {
   const { defaultPbdPeriod, defaultUpsaPeriod } = school;
   const [pbdResult, upsaResult, preflight] = await Promise.all([
     defaultPbdPeriod ? getAllPbdRecords(school, defaultPbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
-    defaultUpsaPeriod ? getAllAssessmentClassResultsWithRegistry(context, defaultUpsaPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
+    defaultUpsaPeriod ? getAllAssessmentClassResultsHybrid(context, defaultUpsaPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
     getSchoolPreflightReport(school),
   ]);
   const pbdRecords = pbdResult.data;

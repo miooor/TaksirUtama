@@ -34,22 +34,22 @@ export function UpsaStudentTable({ students, period }: { students: UpsaStudentRe
       : `/api/upsa/slips/${encodeURIComponent(student.className)}/students/${encodeURIComponent(student.id)}/pdf`;
 
   return (
-    <div className="overflow-hidden rounded-lg border bg-white">
-      <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-xl border border-border-default bg-surface-card shadow-card">
+      <div className="flex flex-col gap-3 border-b border-border-default p-4 sm:flex-row sm:items-center sm:justify-between">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Cari nama murid"
-          className="w-full rounded-md border px-3 py-2 text-sm sm:max-w-xs"
+          className="w-full rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised transition-[border-color,box-shadow] focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20 sm:max-w-xs"
         />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" checked={missingOnly} onChange={(event) => setMissingOnly(event.target.checked)} />
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            <input type="checkbox" checked={missingOnly} onChange={(event) => setMissingOnly(event.target.checked)} className="h-4 w-4 cursor-pointer rounded border-border-strong accent-[var(--primary-600)]" />
             Tunjuk markah hilang sahaja
           </label>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
             <span>Susun</span>
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="rounded-md border bg-white px-3 py-2">
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
               <option value="bil">Bil asal</option>
               <option value="average-desc">Purata tertinggi</option>
               <option value="average-asc">Purata terendah</option>
@@ -59,61 +59,56 @@ export function UpsaStudentTable({ students, period }: { students: UpsaStudentRe
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-[58rem] w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+          <thead>
             <tr>
-              <th className="px-4 py-3">Bil</th>
-              <th className="px-4 py-3">Nama murid</th>
-              <th className="px-4 py-3">Markah dipaparkan</th>
-              <th className="px-4 py-3">Subjek diisi</th>
-              <th className="px-4 py-3">Jumlah diproses</th>
-              <th className="px-4 py-3">Purata</th>
-              <th className="px-4 py-3">Markah hilang</th>
-              <th className="px-4 py-3">TH</th>
-              <th className="px-4 py-3 text-right">Tindakan</th>
+              {["Bil", "Nama murid", "Markah dipaparkan", "Subjek diisi", "Jumlah diproses", "Purata", "Markah hilang", "TH"].map((heading) => (
+                <th key={heading} className="whitespace-nowrap border-b border-border-default bg-surface-inset px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">{heading}</th>
+              ))}
+              <th className="whitespace-nowrap border-b border-border-default bg-surface-inset px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-text-muted">Tindakan</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((student) => (
-              <tr key={student.id} className="border-t align-top hover:bg-slate-50/70">
-                <td className="px-4 py-3 text-slate-500">{student.bil}</td>
-                <td className="px-4 py-3 font-medium">{student.name}</td>
+              <tr key={student.id} className="border-b border-border-default align-top transition-colors last:border-b-0 hover:bg-surface-inset/60">
+                <td className="px-4 py-3 tabular-nums text-text-disabled">{student.bil}</td>
+                <td className="px-4 py-3 font-medium text-text-primary">{student.name}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1.5">
                     {student.subjects.map((subject) => (
-                      <span key={subject.subjectCode} className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                      <span key={subject.subjectCode} className="rounded-md bg-surface-inset px-2 py-1 text-xs font-medium tabular-nums text-text-secondary">
                         {subject.subjectCode} {displayMark(subject)}
                       </span>
                     ))}
                   </div>
                 </td>
-                <td className="px-4 py-3">{student.validSubjectCount}</td>
-                <td className="px-4 py-3">{student.totalMarks ?? "-"}</td>
-                <td className="px-4 py-3">{student.average?.toFixed(1) ?? "-"}</td>
+                <td className="px-4 py-3 tabular-nums">{student.validSubjectCount}</td>
+                <td className="px-4 py-3 tabular-nums">{student.totalMarks ?? "-"}</td>
+                <td className="px-4 py-3 tabular-nums">{student.average?.toFixed(1) ?? "-"}</td>
                 <td className="px-4 py-3">
                   {student.missingSubjects.length ? (
-                    <span className="text-amber-700">{student.missingSubjects.join(", ")}</span>
+                    <span className="font-medium text-warning-text">{student.missingSubjects.join(", ")}</span>
                   ) : (
-                    <span className="text-emerald-700">Lengkap</span>
+                    <span className="font-medium text-success-text">Lengkap</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
                   {student.absentSubjects.length ? (
-                    <span className="text-sky-700">{student.absentSubjects.join(", ")}</span>
+                    <span className="font-medium text-info-text">{student.absentSubjects.join(", ")}</span>
                   ) : (
-                    <span className="text-slate-500">-</span>
+                    <span className="text-text-disabled">-</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
                     <Link
                       href={`${classSlipsPath(student.className)}#${encodeURIComponent(student.id)}`}
-                      className="rounded-md border px-3 py-2"
+                      className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary"
                     >
                       Pratonton
                     </Link>
                     <a
                       href={studentPdfPath(student)}
-                      className="action-accent"
+                      className="inline-flex items-center justify-center rounded-lg border border-primary-700 bg-primary-700 px-3 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800"
                     >
                       PDF
                     </a>

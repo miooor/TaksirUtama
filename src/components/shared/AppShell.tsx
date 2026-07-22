@@ -42,12 +42,12 @@ export async function AppShell({ children, chrome = true }: { children: React.Re
                 <ClerkLogoutButton label={language === "en" ? "Log out" : "Keluar"} />
               ) : (
                 <form action="/api/auth/logout" method="post">
-                  <button className="w-full rounded-md border border-stone-300 px-3 py-1.5 text-left text-sm">{language === "en" ? "Log out" : "Keluar"}</button>
+                  <button className="w-full rounded-lg border border-border-default px-3 py-1.5 text-left text-sm text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary">{language === "en" ? "Log out" : "Keluar"}</button>
                 </form>
               )}
             </>} /> : null}
       <div className="min-w-0 flex-1">
-      <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {chrome ? <Breadcrumbs language={language} /> : null}
         {children}
       </main>

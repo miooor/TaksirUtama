@@ -7,17 +7,17 @@ export function SimpleBarChart({
 }) {
   const max = Math.max(...data.map((item) => item.value), 1);
   return (
-    <section className="rounded-lg border bg-white p-5">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+      <h2 className="font-display text-lg font-semibold text-text-primary">{title}</h2>
       <div className="mt-4 space-y-3">
         {data.map((item) => (
           <div key={item.label}>
             <div className="mb-1 flex items-center justify-between text-sm">
-              <span>{item.label}</span>
-              <span className="text-slate-500">{item.value}</span>
+              <span className="text-text-secondary">{item.label}</span>
+              <span className="tabular-nums text-text-muted">{item.value}</span>
             </div>
-            <div className="h-2 rounded-full bg-stone-100">
-              <div className="h-2 rounded-full bg-teal-700" style={{ width: `${(item.value / max) * 100}%` }} />
+            <div className="h-2 rounded-full bg-surface-sunken">
+              <div className="h-2 rounded-full bg-primary-600" style={{ width: `${(item.value / max) * 100}%` }} />
             </div>
           </div>
         ))}

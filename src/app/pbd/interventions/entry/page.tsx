@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { Database, NotebookPen } from "lucide-react";
 import { PbdInterventionWorkspace } from "@/components/pbd/PbdInterventionWorkspace";
 import { AppShell } from "@/components/shared/AppShell";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth/actor";
 import { isDatabaseConfigured } from "@/lib/db/client";
 import { getDatabasePbdInterventions } from "@/lib/db/interventions";
@@ -26,7 +27,14 @@ export default async function PbdInterventionEntryPage({ searchParams }: { searc
   const selectedSubjectId = selectSubjectForEntry(eligibleSubjects.map((item) => item.id), query.subjectId, undefined, activeRows);
 
   return <AppShell>
-    <PageHeader eyebrow="PBD" title={`Isi Intervensi · Semester ${semester} · ${year}`} description="Rekod murid TP1 dan TP2 mengikut subjek." icon={NotebookPen} actions={<Link className="rounded-md border border-stone-300 px-3 py-2" href={`/intervensi?year=${year}&semester=${semester}`}>Lihat pemantauan</Link>} />
-    {!databaseConfigured ? <section className="mt-6 rounded-lg bg-white p-6"><Database className="h-5 w-5 text-teal-800" /><h2 className="mt-3 font-semibold">Pangkalan data belum disambungkan</h2><p className="mt-2 text-sm text-slate-600">Sambungkan pangkalan data dan jalankan migrasi sebelum merekod intervensi.</p></section> : <PbdInterventionWorkspace key={`${semester}:${selectedSubjectId ?? "none"}`} setup={setup!} registry={registry!} entries={entries} year={year} semester={semester} selectedSubjectId={selectedSubjectId} />}
+    <PageHeader eyebrow="PBD" title={`Isi Intervensi · Semester ${semester} · ${year}`} description="Rekod murid TP1 dan TP2 mengikut subjek." icon={NotebookPen} actions={<Button variant="outline" size="sm" href={`/intervensi?year=${year}&semester=${semester}`}>Lihat pemantauan</Button>} />
+    {!databaseConfigured ? (
+      <EmptyState
+        icon={Database}
+        title="Pangkalan data belum disambungkan"
+        description="Sambungkan pangkalan data dan jalankan migrasi sebelum merekod intervensi."
+        className="mt-6"
+      />
+    ) : <PbdInterventionWorkspace key={`${semester}:${selectedSubjectId ?? "none"}`} setup={setup!} registry={registry!} entries={entries} year={year} semester={semester} selectedSubjectId={selectedSubjectId} />}
   </AppShell>;
 }

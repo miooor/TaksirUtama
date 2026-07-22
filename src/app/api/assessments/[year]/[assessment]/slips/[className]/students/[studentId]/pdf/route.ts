@@ -1,6 +1,6 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getAssessmentApiContext, reportAssessmentName } from "@/lib/assessmentApi";
-import { getAssessmentClassResultWithRegistry } from "@/lib/upsa/data";
+import { getAssessmentClassResultHybrid } from "@/lib/upsa/data";
 import { SkspsUpsaSlipTemplate } from "@/pdf/templates/SkspsUpsaSlipTemplate";
 import { schoolReportFilename } from "@/lib/reportFilename";
 
@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { className, studentId } = await params;
   const { context, school, period } = await getAssessmentApiContext(params);
-  const result = await getAssessmentClassResultWithRegistry(context, period, decodeURIComponent(className));
+  const result = await getAssessmentClassResultHybrid(context, period, decodeURIComponent(className));
   const student = result.students.find((item) => item.id === decodeURIComponent(studentId));
   if (!student) {
     return new Response("Student not found", { status: 404 });

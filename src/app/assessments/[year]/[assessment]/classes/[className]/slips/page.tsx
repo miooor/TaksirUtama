@@ -14,13 +14,13 @@ export default async function AssessmentSlipsPage({
   const result = await getAssessmentClassResult(school, period, decodeURIComponent(className));
   return (
     <AppShell>
-      <div className="flex flex-col gap-4 border-b pb-6 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-4 border-b border-border-default pb-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm text-slate-500">Pratonton slip</p>
-          <h1 className="mt-1 text-2xl font-semibold">{result.className}</h1>
-          <p className="mt-1 text-sm text-slate-500">{period.examName}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary-600">Pratonton slip</p>
+          <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-text-primary">{result.className}</h1>
+          <p className="mt-1 text-sm text-text-muted">{period.examName}</p>
         </div>
-        <a href={`${assessmentApiBasePath(period)}/slips/${encodeURIComponent(result.className)}/pdf`} className="action-accent text-sm">
+        <a href={`${assessmentApiBasePath(period)}/slips/${encodeURIComponent(result.className)}/pdf`} className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-primary-700 bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800 md:self-auto">
           Muat turun semua slip
         </a>
       </div>

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAssessmentApiContext } from "@/lib/assessmentApi";
-import { getAssessmentClassResultWithRegistry } from "@/lib/upsa/data";
+import { getAssessmentClassResultHybrid } from "@/lib/upsa/data";
 
 export async function GET(
   _: Request,
   { params }: { params: Promise<{ year: string; assessment: string; className: string }> },
 ) {
   const { className } = await params;
-  const { context, school, period } = await getAssessmentApiContext(params);
-  return NextResponse.json(await getAssessmentClassResultWithRegistry(context, period, decodeURIComponent(className)));
+  const { context, period } = await getAssessmentApiContext(params);
+  return NextResponse.json(await getAssessmentClassResultHybrid(context, period, decodeURIComponent(className)));
 }

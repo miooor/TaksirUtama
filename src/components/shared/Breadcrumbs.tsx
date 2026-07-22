@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { Language } from "@/lib/i18n";
 
@@ -42,12 +43,16 @@ export function Breadcrumbs({ language }: { language: Language }) {
         : labels[segment] ?? decodeURIComponent(segment),
   }));
   return (
-    <nav className="mb-5 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-      <Link href="/dashboard">Dashboard</Link>
-      {crumbs.map((crumb) => (
-          <span key={crumb.href} className="flex items-center gap-2">
-            <span>/</span>
-            <Link href={crumb.href}>{crumb.label}</Link>
+    <nav className="mb-5 flex min-w-0 flex-wrap items-center gap-1 text-sm" aria-label="Breadcrumb">
+      <Link href="/dashboard" className="rounded-md px-1.5 py-0.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary">Dashboard</Link>
+      {crumbs.map((crumb, index) => (
+          <span key={crumb.href} className="flex min-w-0 items-center gap-1">
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-text-disabled" aria-hidden="true" />
+            {index === crumbs.length - 1 ? (
+              <span className="truncate px-1.5 py-0.5 font-medium text-text-primary">{crumb.label}</span>
+            ) : (
+              <Link href={crumb.href} className="truncate rounded-md px-1.5 py-0.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary">{crumb.label}</Link>
+            )}
           </span>
       ))}
     </nav>

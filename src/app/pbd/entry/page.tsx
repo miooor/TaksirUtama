@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { Database, PenLine } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { PbdEntryWorkspace } from "@/components/pbd/PbdEntryWorkspace";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth/actor";
 import { isDatabaseConfigured } from "@/lib/db/client";
 import { getDatabasePbdSetup } from "@/lib/db/pbd";
@@ -28,8 +29,15 @@ export default async function PbdEntryPage({ searchParams }: { searchParams: Pro
   );
   return (
     <AppShell>
-      <PageHeader eyebrow="PBD" title={`Pengisian Rumusan TP · Semester ${semester} · ${year}`} description="Satu subjek, semua kelas yang ditetapkan." icon={PenLine} actions={<Link className="rounded-md border px-3 py-2" href={pbdSemesterHref(`/pbd/periods/${year}`, semester)}>Lihat analisis</Link>} />
-      {!databaseConfigured ? <section className="mt-6 rounded-lg bg-white p-6"><Database className="h-5 w-5 text-teal-800" /><h2 className="mt-3 font-semibold">Pangkalan data belum disambungkan</h2><p className="mt-2 max-w-2xl text-sm text-slate-600">Tetapkan DATABASE_URL, jalankan migrasi pangkalan data, kemudian buka semula halaman ini.</p></section> : <PbdEntryWorkspace key={`${semester}:${selectedSubjectId ?? "none"}`} setup={setup!} year={year} semester={semester} selectedSubjectId={selectedSubjectId} />}
+      <PageHeader eyebrow="PBD" title={`Pengisian Rumusan TP · Semester ${semester} · ${year}`} description="Satu subjek, semua kelas yang ditetapkan." icon={PenLine} actions={<Button variant="outline" size="sm" href={pbdSemesterHref(`/pbd/periods/${year}`, semester)}>Lihat analisis</Button>} />
+      {!databaseConfigured ? (
+        <EmptyState
+          icon={Database}
+          title="Pangkalan data belum disambungkan"
+          description="Tetapkan DATABASE_URL, jalankan migrasi pangkalan data, kemudian buka semula halaman ini."
+          className="mt-6"
+        />
+      ) : <PbdEntryWorkspace key={`${semester}:${selectedSubjectId ?? "none"}`} setup={setup!} year={year} semester={semester} selectedSubjectId={selectedSubjectId} />}
     </AppShell>
   );
 }
