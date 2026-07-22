@@ -6,7 +6,8 @@ import type { SchoolContext } from "@/lib/config/schools";
 import type { AssessmentPeriod } from "@/lib/config/periods";
 import type { SchoolRegistry } from "@/types/registry";
 import { DataSourceError } from "@/lib/dataSourceError";
-import { isDatabaseConfigured } from "@/lib/db/client";
+import { getDatabase, isDatabaseConfigured } from "@/lib/db/client";
+import type { UpsaClassResult } from "@/types/upsa";
 import { getSchoolRegistry } from "@/lib/db/schoolRegistry";
 import { buildAllClassResultsFromDb, buildClassResultFromDb, upsertAssessmentResults } from "@/lib/db/assessmentResults";
 import { fetchSheetValueRanges, fetchSheetValues } from "@/lib/googleSheets/fetchSheetValues";
@@ -146,6 +147,73 @@ export async function getAllAssessmentClassResultsWithRegistry(
 }
 
 /**
+ * A DB snapshot for a class is only a safe substitute for the source spreadsheet
+ * when it is complete: every active enrollment for the class must be present and
+ * every subject assigned to the class must have results. Otherwise a single
+ * persisted pupil/subject (e.g. right after entering one class-subject, or a
+ * Sheets import that matched only some pupils) would be returned as the whole
+ * class and slips/analysis/CSV/PDF would silently omit the rest.
+ */
+async function isDbClassSnapshotComplete(
+  context: ActorContext,
+  classId: string,
+  academicYearId: string,
+  dbResult: UpsaClassResult,
+  registry: SchoolRegistry,
+): Promise<boolean> {
+  const sql = getDatabase();
+  const schoolId = context.school.id;
+
+  // Pupil coverage: every active enrollment for the class must be present.
+  const enrolledIds = registry.enrollments.filter((e) => e.classId === classId && e.active).map((e) => e.id);
+  if (enrolledIds.length === 0) return false;
+  const presentIds = new Set(dbResult.students.map((s) => s.enrollmentId));
+  for (const id of enrolledIds) {
+    if (!presentIds.has(id)) return false;
+  }
+
+  // Subject coverage: every subject assigned to the class must have results.
+  const subjectRows = await sql`
+    SELECT s.code FROM class_subjects cs
+    JOIN school_subjects s ON s.id = cs.subject_id AND s.school_id = ${schoolId}
+    WHERE cs.class_id = ${classId} AND cs.school_id = ${schoolId} AND cs.active = true
+  `;
+  const expectedCodes = subjectRows.map((row) => String(row.code));
+  if (expectedCodes.length === 0) return true; // no subject config yet; pupil coverage suffices
+  const presentCodes = new Set(dbResult.students.flatMap((s) => s.subjects.map((sj) => sj.subjectCode)));
+  for (const code of expectedCodes) {
+    if (!presentCodes.has(code)) return false;
+  }
+  return true;
+}
+
+/**
+ * Completeness gate for the all-classes DB snapshot: every class that has active
+ * enrollments must be present in the DB results and itself complete.
+ */
+async function areAllDbClassSnapshotsComplete(
+  context: ActorContext,
+  academicYearId: string,
+  dbResults: UpsaClassResult[],
+  registry: SchoolRegistry,
+): Promise<boolean> {
+  const classesWithEnrollments = new Map<string, string>();
+  for (const enrollment of registry.enrollments) {
+    if (enrollment.active && !classesWithEnrollments.has(enrollment.classId)) {
+      classesWithEnrollments.set(enrollment.classId, enrollment.className);
+    }
+  }
+  if (classesWithEnrollments.size === 0) return false;
+  const dbByClassName = new Map(dbResults.map((result) => [result.className, result]));
+  for (const [classId, className] of classesWithEnrollments) {
+    const dbResult = dbByClassName.get(className);
+    if (!dbResult || dbResult.students.length === 0) return false;
+    if (!(await isDbClassSnapshotComplete(context, classId, academicYearId, dbResult, registry))) return false;
+  }
+  return true;
+}
+
+/**
  * DB-first hybrid fetcher for a single class.
  * Tries to read from assessment_results in Neon; falls back to Google Sheets
  * (which also upserts to DB as a side effect for next time).
@@ -159,7 +227,13 @@ export async function getAssessmentClassResultHybrid(
     const registry = await getSchoolRegistry(context, String(period.year));
     if (registry.academicYearId && className) {
       const dbResult = await buildClassResultFromDb(context, period, className, registry.academicYearId, registry);
-      if (dbResult && dbResult.students.length > 0) return dbResult;
+      const classId = registry.enrollments.find((e) => e.className === className && e.active)?.classId;
+      if (
+        dbResult && dbResult.students.length > 0 && classId &&
+        (await isDbClassSnapshotComplete(context, classId, registry.academicYearId, dbResult, registry))
+      ) {
+        return dbResult;
+      }
     }
   }
   // Fall back to Sheets (which also upserts to DB as a side effect)
@@ -179,7 +253,7 @@ export async function getAllAssessmentClassResultsHybrid(
     const registry = await getSchoolRegistry(context, String(period.year));
     if (registry.academicYearId) {
       const dbResults = await buildAllClassResultsFromDb(context, period, registry.academicYearId, registry);
-      if (dbResults.length > 0) {
+      if (dbResults.length > 0 && (await areAllDbClassSnapshotsComplete(context, registry.academicYearId, dbResults, registry))) {
         // If specific classNames were requested, filter to those
         if (classNames) {
           const requested = new Set(classNames);

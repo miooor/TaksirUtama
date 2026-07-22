@@ -71,10 +71,22 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
   const [reopenState, , reopenPending] = useActionState(reopenAssessmentEntryAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // When a fresh successful save arrives, clear the dirty flag so a subsequent
+  // edit is recognised as new unsaved changes. Previously saveState.success
+  // stayed set forever, which kept isDirty false and the save button disabled
+  // after the first successful save, so a teacher could not save a second
+  // correction without reloading. Uses React's render-phase state adjustment
+  // pattern (track the last handled save revision in state) rather than an
+  // effect or a ref read during render.
+  const [lastSavedRevision, setLastSavedRevision] = useState<number | undefined>(undefined);
+  if (saveState.success && saveState.revision !== undefined && saveState.revision !== lastSavedRevision) {
+    setLastSavedRevision(saveState.revision);
+    setDirty(false);
+  }
   // Derive effective revision from action results (avoids setState-in-effect)
   const currentRevision = reopenState.revision ?? finalizeState.revision ?? saveState.revision ?? revision;
   const isFinalNow = finalizeState.status === "final" ? true : reopenState.status === "draft" ? false : isFinal;
-  const isDirty = dirty && !saveState.success;
+  const isDirty = dirty;
 
   // Persist draft to localStorage on change
   useEffect(() => {
@@ -119,7 +131,7 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
 
       {/* Feedback messages */}
       {error ? <Alert variant="danger" className="mt-3">{error}</Alert> : null}
-      {success && !error ? <Alert variant="success" className="mt-3">{success}</Alert> : null}
+      {success && !error && !isDirty ? <Alert variant="success" className="mt-3">{success}</Alert> : null}
       {recoveryNotice ? <Alert variant="info" className="mt-3">{recoveryNotice}</Alert> : null}
 
       {/* Entry form */}
@@ -165,6 +177,7 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
                       <input
                         type="checkbox"
                         name={`absent:${student.enrollmentId}`}
+                        value="true"
                         checked={entry.absent}
                         disabled={isFinalNow}
                         onChange={(e) => updateEntry(student.enrollmentId, { absent: e.target.checked, mark: e.target.checked ? "" : entry.mark })}
@@ -191,7 +204,7 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
             <Button
               variant="secondary"
               icon={CheckCircle2}
-              disabled={pending || !allComplete}
+              disabled={pending || !allComplete || isDirty}
               loading={finalizePending}
               onClick={() => {
                 if (formRef.current) {
@@ -199,7 +212,7 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
                   finalizeAssessmentEntryAction(finalizeState, fd);
                 }
               }}
-              title={allComplete ? "Muktamadkan pengisian ini" : "Lengkapkan semua markah atau TH terlebih dahulu"}
+              title={isDirty ? "Simpan draf terlebih dahulu sebelum memuktamadkan" : allComplete ? "Muktamadkan pengisian ini" : "Lengkapkan semua markah atau TH terlebih dahulu"}
             >
               {finalizePending ? "Memuktamadkan..." : "Muktamadkan"}
             </Button>

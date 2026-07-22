@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ActorContext } from "@/lib/auth/actor";
 import { getDatabase, isDatabaseConfigured } from "@/lib/db/client";
+import { gradeFromMark } from "@/lib/upsa/grading";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -209,75 +210,93 @@ export async function saveAssessmentMarks(
   if (!subjectRows[0]) throw new Error("Subjek tidak ditemui.");
   const subjectCode = String(subjectRows[0].code);
 
-  // Get or validate entry status
-  const statusRows = await sql`
-    SELECT * FROM assessment_entry_status
-    WHERE school_id = ${schoolId} AND academic_year_id = ${academicYearId}
-      AND assessment_type = ${input.assessmentType} AND class_id = ${input.classId} AND subject_id = ${input.subjectId}
-    FOR UPDATE
+  // Validate the posted enrollments against the active roster for this class.
+  // The schema uses independent foreign keys, so without this a crafted
+  // submission could write results for enrollments belonging to another class,
+  // year or school. Resolve the roster server-side and reject anything that does
+  // not belong to the selected class (and whose student id does not match).
+  const rosterRows = await sql`
+    SELECT e.id, e.student_id FROM student_class_enrolments e
+    WHERE e.school_id = ${schoolId} AND e.class_id = ${input.classId}
+      AND e.academic_year_id = ${academicYearId} AND e.active = true
   `;
-
-  const existing = statusRows[0] ? statusFromRow(statusRows[0] as Record<string, unknown>) : null;
-  const currentRevision = existing?.revision ?? 0;
-
-  if (currentRevision !== input.expectedRevision) {
-    throw new Error("Rekod telah dikemas kini oleh pengguna lain. Muat semula halaman.");
-  }
-  if (existing?.status === "final") {
-    throw new Error("Buka semula rekod muktamad sebelum mengubahnya.");
+  const rosterByEnrollment = new Map(rosterRows.map((row) => [String(row.id), String(row.student_id)]));
+  for (const entry of input.marks) {
+    if (rosterByEnrollment.get(entry.enrollmentId) !== entry.studentId) {
+      throw new Error("Senarai murid tidak sah untuk kelas ini. Muat semula halaman.");
+    }
   }
 
-  // Upsert marks
+  // Build the write transaction. The guard function runs first: it locks the
+  // entry-status row (SELECT ... FOR UPDATE) and validates the expected revision
+  // and draft status *inside the same transaction* as the writes. Neon
+  // transactions are non-interactive, so this is done in SQL (migration 011)
+  // rather than in application code; concurrent editors of an existing draft can
+  // no longer both pass the same expected revision and overwrite each other.
   const operations = [];
+  operations.push(sql`
+    SELECT assert_assessment_entry_revision(
+      ${schoolId}, ${academicYearId}, ${input.assessmentType}, ${input.classId}, ${input.subjectId}, ${input.expectedRevision}
+    )
+  `);
+
+  // Upsert marks, deriving the grade from the mark so in-app entered results
+  // carry a grade (the Sheets path reads the grade from a sheet column).
   let changedCount = 0;
   for (const entry of input.marks) {
     const id = randomUUID();
+    const grade = entry.mark === null ? null : gradeFromMark(entry.mark);
     operations.push(sql`
       INSERT INTO assessment_results (
         id, school_id, academic_year_id, assessment_type, class_id,
-        enrollment_id, student_id, subject_code, mark, max_mark, status
+        enrollment_id, student_id, subject_code, mark, max_mark, grade, status
       ) VALUES (
         ${id}, ${schoolId}, ${academicYearId}, ${input.assessmentType}, ${input.classId},
         ${entry.enrollmentId}, ${entry.studentId}, ${subjectCode},
-        ${entry.mark}, 100, ${entry.status}
+        ${entry.mark}, 100, ${grade}, ${entry.status}
       )
       ON CONFLICT (school_id, academic_year_id, assessment_type, enrollment_id, subject_code)
       DO UPDATE SET
         mark = EXCLUDED.mark,
+        grade = EXCLUDED.grade,
         status = EXCLUDED.status,
         updated_at = now()
       WHERE assessment_results.mark IS DISTINCT FROM EXCLUDED.mark
+        OR assessment_results.grade IS DISTINCT FROM EXCLUDED.grade
         OR assessment_results.status IS DISTINCT FROM EXCLUDED.status
     `);
     changedCount += 1;
   }
 
-  // Upsert entry status
+  // Upsert entry status keyed on its natural key (bumps the revision on update).
   const enrolledCount = input.marks.length;
-  const statusId = existing?.id ?? randomUUID();
-  if (existing) {
-    operations.push(sql`
-      UPDATE assessment_entry_status
-      SET enrolled_count = ${enrolledCount}, revision = revision + 1, updated_by = ${actorId}, updated_at = now()
-      WHERE id = ${existing.id}
-    `);
-  } else {
-    operations.push(sql`
-      INSERT INTO assessment_entry_status (id, school_id, academic_year_id, assessment_type, class_id, subject_id, enrolled_count, status, revision, updated_by)
-      VALUES (${statusId}, ${schoolId}, ${academicYearId}, ${input.assessmentType}, ${input.classId}, ${input.subjectId}, ${enrolledCount}, 'draft', 1, ${actorId})
-    `);
-  }
+  const statusId = randomUUID();
+  operations.push(sql`
+    INSERT INTO assessment_entry_status (id, school_id, academic_year_id, assessment_type, class_id, subject_id, enrolled_count, status, revision, updated_by)
+    VALUES (${statusId}, ${schoolId}, ${academicYearId}, ${input.assessmentType}, ${input.classId}, ${input.subjectId}, ${enrolledCount}, 'draft', 1, ${actorId})
+    ON CONFLICT (school_id, academic_year_id, assessment_type, class_id, subject_id)
+    DO UPDATE SET
+      enrolled_count = EXCLUDED.enrolled_count,
+      revision = assessment_entry_status.revision + 1,
+      updated_by = EXCLUDED.updated_by,
+      updated_at = now()
+  `);
 
-  // Record revision
+  // Record revision (resolve the entry-status id via subquery, since the
+  // transaction is non-interactive and the guard's return value is not captured).
   const revisionId = randomUUID();
   operations.push(sql`
     INSERT INTO assessment_entry_revisions (id, school_id, entry_status_id, actor_id, action, summary_json)
-    VALUES (${revisionId}, ${schoolId}, ${statusId}, ${actorId}, 'save_draft',
+    VALUES (${revisionId}, ${schoolId},
+      (SELECT id FROM assessment_entry_status
+        WHERE school_id = ${schoolId} AND academic_year_id = ${academicYearId}
+          AND assessment_type = ${input.assessmentType} AND class_id = ${input.classId} AND subject_id = ${input.subjectId}),
+      ${actorId}, 'save_draft',
       ${JSON.stringify({ markedCount: input.marks.filter((m) => m.status === "marked").length, absentCount: input.marks.filter((m) => m.status === "absent").length })}::jsonb)
   `);
 
   await sql.transaction(operations);
-  return { revision: currentRevision + 1, status: "draft", changedCount };
+  return { revision: input.expectedRevision + 1, status: "draft", changedCount };
 }
 
 // ---------------------------------------------------------------------------
