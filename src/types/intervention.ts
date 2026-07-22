@@ -1,5 +1,6 @@
 export type InterventionPriority = "high" | "single-subject";
 export type InterventionSeverity = "urgent" | "coordinated" | "monitor";
+export type InterventionWorkflowStatus = "planned" | "in_progress" | "needs_review" | "completed";
 
 export type PbdInterventionEntry = {
   id?: string;
@@ -21,6 +22,10 @@ export type PbdInterventionEntry = {
   semester?: "1" | "2";
   revision?: number;
   active?: boolean;
+  workflowStatus?: InterventionWorkflowStatus;
+  reviewDueOn?: string | null;
+  followUpNote?: string | null;
+  reviewedOn?: string | null;
 };
 
 export type PbdInterventionIssue = {

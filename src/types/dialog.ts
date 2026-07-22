@@ -1,4 +1,4 @@
-import type { InterventionPupilSummary } from "@/types/intervention";
+import type { InterventionPupilSummary, PbdInterventionEntry } from "@/types/intervention";
 
 export type DialogInsightCategory =
   | "Risiko akademik"
@@ -151,4 +151,5 @@ export type DialogInterventionRow = {
   subjectCount: number;
   repeatedRisk: boolean;
   pupil: InterventionPupilSummary;
+  entry?: PbdInterventionEntry;
 };
