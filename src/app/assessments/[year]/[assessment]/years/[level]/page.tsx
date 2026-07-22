@@ -9,10 +9,9 @@ import { Button } from "@/components/ui/button";
 import { DataTable, TableShell, TD, TH, THead, TRow } from "@/components/ui/table";
 import { UpsaSubjectGradeStackedColumns } from "@/components/upsa/UpsaSubjectGradeStackedColumns";
 import { calculateUpsaYearAnalysis } from "@/lib/upsa/calculateUpsaYearAnalysis";
-import { getAssessmentClassResult } from "@/lib/upsa/data";
-import { listAssessmentClassTabs } from "@/lib/upsa/listUpsaClassTabs";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { getLanguage, text } from "@/lib/i18n";
-import { assessmentApiBasePath, assessmentBasePath, getAssessmentPageContext } from "@/lib/assessmentPages";
+import { assessmentApiBasePath, assessmentBasePath, getAssessmentActorPageContext } from "@/lib/assessmentPages";
 import { assessmentLabel } from "@/lib/config/periods";
 
 export default async function AssessmentYearAnalysisPage({
@@ -21,9 +20,9 @@ export default async function AssessmentYearAnalysisPage({
   params: Promise<{ year: string; assessment: string; level: string }>;
 }) {
   const { level } = await params;
-  const { school, period } = await getAssessmentPageContext(params);
-  const classes = (await listAssessmentClassTabs(school, period)).filter((className) => className.startsWith(`${level} `));
-  const results = await Promise.all(classes.map((className) => getAssessmentClassResult(school, period, className)));
+  const { context, period } = await getAssessmentActorPageContext(params);
+  const allResults = await getAllAssessmentClassResultsHybrid(context, period);
+  const results = allResults.filter((result) => result.className.startsWith(`${level} `));
   const analysis = calculateUpsaYearAnalysis(level, results);
   const language = await getLanguage();
 

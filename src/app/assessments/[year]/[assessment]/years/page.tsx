@@ -2,15 +2,15 @@ import { BarChart3 } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAllAssessmentClassResults } from "@/lib/upsa/data";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { calculateUpsaYearAnalysis } from "@/lib/upsa/calculateUpsaYearAnalysis";
 import { getLanguage, text } from "@/lib/i18n";
-import { assessmentApiBasePath, assessmentYearPath, getAssessmentPageContext } from "@/lib/assessmentPages";
+import { assessmentApiBasePath, assessmentYearPath, getAssessmentActorPageContext } from "@/lib/assessmentPages";
 import { assessmentLabel } from "@/lib/config/periods";
 
 export default async function AssessmentYearsPage({ params }: { params: Promise<{ year: string; assessment: string }> }) {
-  const { school, period } = await getAssessmentPageContext(params);
-  const results = await getAllAssessmentClassResults(school, period);
+  const { context, period } = await getAssessmentActorPageContext(params);
+  const results = await getAllAssessmentClassResultsHybrid(context, period);
   const grouped = Map.groupBy(results, (result) => result.className.split(" ")[0]);
   const language = await getLanguage();
 

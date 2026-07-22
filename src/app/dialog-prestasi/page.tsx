@@ -6,11 +6,11 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
-import { requireSchoolContext } from "@/lib/auth";
+import { requireActorContext } from "@/lib/auth/actor";
 import { listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
 import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
 import { getAllPbdInterventions, listPbdSubjectTabs } from "@/lib/pbd/data";
-import { getAllAssessmentClassResults } from "@/lib/upsa/data";
+import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { getLanguage, text } from "@/lib/i18n";
 import { interventionPupilKey } from "@/lib/pbd/intervention";
 import { resolveInterventionQueryContext } from "@/lib/pbd/interventionContext";
@@ -34,7 +34,8 @@ const subjectNames: Record<string, string> = {
 
 export default async function DialogPrestasiPage({ searchParams }: { searchParams: Promise<{ year?: string; semester?: string; assessment?: string }> }) {
   const language = await getLanguage();
-  const school = await requireSchoolContext();
+  const context = await requireActorContext();
+  const school = context.school;
   const { assessmentPeriods, defaultPbdPeriod, pbdPeriods } = school;
   const params = await searchParams;
   const requestedYear = params.year;
@@ -57,7 +58,7 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
   const [subjects, interventionData, assessmentResults] = await Promise.all([
     listPbdSubjectTabs(school, pbdPeriod),
     getAllPbdInterventions(school, pbdPeriod),
-    assessmentPeriod ? getAllAssessmentClassResults(school, assessmentPeriod) : Promise.resolve([]),
+    assessmentPeriod ? getAllAssessmentClassResultsHybrid(context, assessmentPeriod).catch(() => []) : Promise.resolve([]),
   ]);
   const assessmentCodes = new Set(assessmentResults.flatMap((result) => result.students.flatMap((student) => student.subjects.map((subject) => subject.subjectCode))));
   const sortedSubjects = [...subjects].sort((a, b) => a.localeCompare(b, "ms"));

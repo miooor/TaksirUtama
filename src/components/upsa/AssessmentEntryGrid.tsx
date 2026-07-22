@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, TableShell, TD, TH, THead, TRow } from "@/components/ui/table";
+import { gradeFromMark } from "@/lib/upsa/grading";
 
 type Props = {
   year: string;
@@ -29,6 +30,14 @@ type Props = {
 type MarkEntry = { mark: string; absent: boolean };
 
 const initialState: AssessmentEntryActionState = {};
+
+function gradeColor(grade: string) {
+  if (grade === "A") return "text-emerald-700";
+  if (grade === "B") return "text-teal-700";
+  if (grade === "C") return "text-amber-700";
+  if (grade === "D") return "text-orange-700";
+  return "text-red-700";
+}
 
 function recoveryKey(year: string, assessmentType: string, classId: string, subjectId: string) {
   return `assessment-entry:${year}:${assessmentType}:${classId}:${subjectId}`;
@@ -149,6 +158,7 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
                 <TH align="center" className="w-14">Bil</TH>
                 <TH>Nama Murid</TH>
                 <TH align="center" className="w-32">Markah /100</TH>
+                <TH align="center" className="w-16">Gred</TH>
                 <TH align="center" className="w-20">TH</TH>
               </tr>
             </THead>
@@ -172,6 +182,15 @@ export function AssessmentEntryGrid({ year, assessmentType, classId, subjectId, 
                         className="h-11 w-24 rounded-lg border border-border-strong bg-surface-card text-center text-sm font-semibold tabular-nums text-text-primary shadow-raised transition-[border-color,box-shadow] focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20 disabled:cursor-not-allowed disabled:bg-surface-inset disabled:text-text-disabled"
                         aria-label={`Markah ${student.displayName}`}
                       />
+                    </TD>
+                    <TD align="center">
+                      {entry.absent || entry.mark === "" ? (
+                        <span className="text-text-disabled">-</span>
+                      ) : (
+                        <span className={`text-sm font-bold ${gradeColor(gradeFromMark(Number(entry.mark)))}`}>
+                          {gradeFromMark(Number(entry.mark))}
+                        </span>
+                      )}
                     </TD>
                     <TD align="center">
                       <input
