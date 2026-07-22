@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { archiveInterventionAction, saveInterventionAction, type InterventionActionState } from "@/app/pbd/interventions/entry/actions";
 import type { DatabasePbdSetup } from "@/lib/db/pbd";
 import { calculateInterventionCoverage } from "@/lib/pbd/interventionWorkflow";
-import { pbdSemesterSwitchMessage } from "@/lib/pbd/subjectEntryWorkflow";
+import { pbdSemesterSwitchMessage } from "@/lib/pbd/entryWorkflow";
 import type { PbdInterventionEntry } from "@/types/intervention";
 import type { SchoolRegistry, StudentClassEnrollment } from "@/types/registry";
 

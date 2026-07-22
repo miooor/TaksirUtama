@@ -14,6 +14,16 @@ export type DashboardSubjectSummary = {
   final: number;
 };
 
+export type DashboardClassSummary = {
+  id: string;
+  name: string;
+  assignments: number;
+  empty: number;
+  mismatch: number;
+  ready: number;
+  final: number;
+};
+
 export type DashboardPbdSummary = {
   activeClasses: number;
   activeSubjects: number;
@@ -25,6 +35,7 @@ export type DashboardPbdSummary = {
   final: number;
   finalizedPercentage: number;
   subjectsNeedingAction: DashboardSubjectSummary[];
+  classesNeedingAction: DashboardClassSummary[];
 };
 
 export function resolveDashboardSelection(input: {
@@ -76,6 +87,7 @@ export function summarizeDashboardPbd(setup: DatabasePbdSetup): DashboardPbdSumm
   const rows = setup.rows.filter((row) => row.active && classIds.has(row.classId) && subjectIds.has(row.subjectId));
   const totals = { empty: 0, mismatch: 0, ready: 0, final: 0 };
   const subjects = new Map<string, DashboardSubjectSummary>();
+  const classes = new Map<string, DashboardClassSummary>();
 
   for (const row of rows) {
     const state = classifyDashboardPbdRow(row);
@@ -93,16 +105,32 @@ export function summarizeDashboardPbd(setup: DatabasePbdSetup): DashboardPbdSumm
     subject.assignments += 1;
     subject[state] += 1;
     subjects.set(row.subjectId, subject);
+    const klass = classes.get(row.classId) ?? {
+      id: row.classId,
+      name: row.className,
+      assignments: 0,
+      empty: 0,
+      mismatch: 0,
+      ready: 0,
+      final: 0,
+    };
+    klass.assignments += 1;
+    klass[state] += 1;
+    classes.set(row.classId, klass);
   }
+
+  const byPriority = <T extends { mismatch: number; ready: number; empty: number }>(a: T, b: T) =>
+    b.mismatch - a.mismatch ||
+    b.ready - a.ready ||
+    b.empty - a.empty;
 
   const subjectsNeedingAction = [...subjects.values()]
     .filter((subject) => subject.empty + subject.mismatch + subject.ready > 0)
-    .sort((a, b) =>
-      b.mismatch - a.mismatch ||
-      b.ready - a.ready ||
-      b.empty - a.empty ||
-      a.code.localeCompare(b.code, "ms"),
-    );
+    .sort((a, b) => byPriority(a, b) || a.code.localeCompare(b.code, "ms"));
+
+  const classesNeedingAction = [...classes.values()]
+    .filter((klass) => klass.empty + klass.mismatch + klass.ready > 0)
+    .sort((a, b) => byPriority(a, b) || a.name.localeCompare(b.name, "ms"));
 
   return {
     activeClasses: activeClasses.length,
@@ -112,5 +140,6 @@ export function summarizeDashboardPbd(setup: DatabasePbdSetup): DashboardPbdSumm
     ...totals,
     finalizedPercentage: rows.length === 0 ? 0 : (totals.final / rows.length) * 100,
     subjectsNeedingAction,
+    classesNeedingAction,
   };
 }

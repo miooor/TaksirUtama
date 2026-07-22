@@ -9,7 +9,7 @@ import { isDatabaseConfigured } from "@/lib/db/client";
 import { getDatabasePbdInterventions } from "@/lib/db/interventions";
 import { getDatabasePbdSetup } from "@/lib/db/pbd";
 import { getSchoolRegistry } from "@/lib/db/schoolRegistry";
-import { selectSubjectForEntry } from "@/lib/pbd/subjectEntryWorkflow";
+import { selectSubjectForEntry } from "@/lib/pbd/entryWorkflow";
 import { resolvePbdSemester } from "@/lib/pbdPages";
 
 export default async function PbdInterventionEntryPage({ searchParams }: { searchParams: Promise<{ year?: string; semester?: string; subjectId?: string }> }) {

@@ -36,7 +36,7 @@ test.describe("assessment entry", () => {
     const response = await page.goto("/assessments/2026/upsa/classes");
     // If the page loads, check for the entry link
     if (response?.ok()) {
-      await expect(page.getByRole("link", { name: /isi markah/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Isi markah", exact: true })).toBeVisible();
     }
   });
 

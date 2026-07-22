@@ -100,7 +100,7 @@ function SidebarNav({ year, collapsed, onNavigate }: { year: string; collapsed?:
       {groups.map((group, index) => (
         <div key={index}>
           {group.title && !collapsed && (
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-disabled">{group.title}</p>
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-muted">{group.title}</p>
           )}
           {group.title && collapsed && index > 0 && <div className="mx-3 mb-2 border-t border-border-default" />}
           <div className="space-y-0.5">
@@ -150,7 +150,7 @@ function SidebarContents({ schoolName, systemName, logoPath, year, controls, col
       </div>
       <div className="mt-4 space-y-2 border-t border-border-default pt-4">
         {controls}
-        <p className="px-1 text-[10px] leading-4 text-text-disabled">Dibina oleh guru untuk guru 🇲🇾</p>
+        <p className="px-1 text-[10px] leading-4 text-text-muted">Dibina oleh guru untuk guru 🇲🇾</p>
       </div>
     </div>
   );
