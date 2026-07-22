@@ -29,24 +29,24 @@ export default async function DataSourcesPage() {
       />
 
       <section className="mt-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border bg-white p-5 md:col-span-2">
-          <h2 className="font-semibold">Sebelum menampal pautan</h2>
-          <ol className="mt-3 space-y-2 text-sm text-slate-600">
+        <div className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card md:col-span-2">
+          <h2 className="font-display font-semibold text-text-primary">Sebelum menampal pautan</h2>
+          <ol className="mt-3 space-y-2 text-sm leading-5 text-text-muted">
             <li>1. Muat turun dan salin templat rasmi ke Google Drive sekolah.</li>
             <li>2. Tukar schoolCode dalam tab _CONFIG kepada {context.school.code}.</li>
             <li>3. Kongsi buku kerja sebagai Viewer dengan akaun perkhidmatan di sebelah.</li>
             <li>4. Tampal pautan dan uji. Sumber lama kekal aktif sehingga sumber baharu lulus.</li>
           </ol>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
-            <Link href={env.NEXT_PUBLIC_ASSESSMENT_TEMPLATE_URL ?? "/templates/templat-upsa-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat UPSA</Link>
-            <Link href={env.NEXT_PUBLIC_UASA_TEMPLATE_URL ?? "/templates/templat-uasa-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat UASA</Link>
-            <Link href={env.NEXT_PUBLIC_PBD_TEMPLATE_URL ?? "/templates/templat-pbd-v1.xlsx"} className="rounded-md border px-3 py-2">Salin templat PBD</Link>
+            <Link href={env.NEXT_PUBLIC_ASSESSMENT_TEMPLATE_URL ?? "/templates/templat-upsa-v1.xlsx"} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary">Salin templat UPSA</Link>
+            <Link href={env.NEXT_PUBLIC_UASA_TEMPLATE_URL ?? "/templates/templat-uasa-v1.xlsx"} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary">Salin templat UASA</Link>
+            <Link href={env.NEXT_PUBLIC_PBD_TEMPLATE_URL ?? "/templates/templat-pbd-v1.xlsx"} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary">Salin templat PBD</Link>
           </div>
         </div>
-        <div className="rounded-lg border bg-white p-5">
-          <h2 className="font-semibold">Akaun Viewer</h2>
-          <p className="mt-3 break-words text-sm text-slate-600">{env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "Belum dikonfigurasi"}</p>
-          <p className="mt-3 text-sm text-slate-600">Berikan akses Viewer sahaja. Jangan berikan akses Editor.</p>
+        <div className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+          <h2 className="font-display font-semibold text-text-primary">Akaun Viewer</h2>
+          <p className="mt-3 break-words text-sm font-medium text-text-secondary">{env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "Belum dikonfigurasi"}</p>
+          <p className="mt-3 text-sm text-text-muted">Berikan akses Viewer sahaja. Jangan berikan akses Editor.</p>
         </div>
       </section>
 

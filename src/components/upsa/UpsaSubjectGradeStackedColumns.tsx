@@ -6,19 +6,19 @@ import { text } from "@/lib/i18n";
 const gradeOrder = ["A", "B", "C", "D", "E", "F"] as const;
 
 const gradeColorClasses = {
-  A: "bg-emerald-600",
-  B: "bg-teal-500",
-  C: "bg-sky-500",
-  D: "bg-amber-400",
-  E: "bg-orange-500",
-  F: "bg-rose-600",
+  A: "bg-success",
+  B: "bg-primary-500",
+  C: "bg-info",
+  D: "bg-accent-400",
+  E: "bg-accent-600",
+  F: "bg-danger",
 } as const;
 
 const gradeLabelColorClasses = {
   A: "text-white",
   B: "text-white",
   C: "text-white",
-  D: "text-slate-900",
+  D: "text-accent-900",
   E: "text-white",
   F: "text-white",
 } as const;
@@ -78,7 +78,7 @@ export function UpsaSubjectGradeStackedColumns({
   language: Language;
 }) {
   return (
-    <section className="rounded-lg border bg-white p-5">
+    <section className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
       <SectionHeading
         icon={ChartColumnStacked}
         tone="violet"
@@ -94,10 +94,10 @@ export function UpsaSubjectGradeStackedColumns({
           return (
             <div key={comparison.subjectCode}>
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-sm font-semibold text-slate-700">
+                <h3 className="text-sm font-semibold text-text-primary">
                   {comparison.subjectCode} · Tahun {year}
                 </h3>
-                <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+                <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
                   {gradeOrder.map((grade) => (
                     <span key={grade} className="inline-flex items-center gap-1.5">
                       <span className={`h-2.5 w-2.5 rounded-full ${gradeColorClasses[grade]}`} />
@@ -110,7 +110,7 @@ export function UpsaSubjectGradeStackedColumns({
               <div className="mt-4 overflow-x-auto pb-2">
                 <div className="mx-auto w-fit min-w-max">
                   <div className="grid grid-cols-[2.5rem_auto] gap-3">
-                    <div className="mt-8 flex h-56 flex-col justify-between text-right text-[11px] text-slate-500">
+                    <div className="mt-8 flex h-56 flex-col justify-between text-right text-[11px] tabular-nums text-text-muted">
                       {[100, 75, 50, 25, 0].map((tick) => (
                         <span key={tick}>{tick}%</span>
                       ))}
@@ -122,7 +122,7 @@ export function UpsaSubjectGradeStackedColumns({
                           {[0, 25, 50, 75, 100].map((tick) => (
                             <span
                               key={tick}
-                              className="absolute inset-x-0 border-t border-slate-200"
+                              className="absolute inset-x-0 border-t border-border-default"
                               style={{ bottom: `${tick}%` }}
                             />
                           ))}
@@ -131,8 +131,8 @@ export function UpsaSubjectGradeStackedColumns({
                         <div className="relative flex items-end gap-5">
                           {columns.map((column) => (
                             <div key={column.label} className="flex w-20 shrink-0 flex-col items-center">
-                              <span className="mb-2 text-xs font-medium text-slate-600">{column.totalPupils}</span>
-                              <div className="flex h-56 w-full flex-col-reverse overflow-hidden rounded-t-md border border-slate-200 bg-slate-50">
+                              <span className="mb-2 text-xs font-medium tabular-nums text-text-muted">{column.totalPupils}</span>
+                              <div className="flex h-56 w-full flex-col-reverse overflow-hidden rounded-t-md border border-border-default bg-surface-inset">
                                 {gradeOrder.map((grade) => {
                                   const count = column.gradeCounts[grade];
                                   const percentage = column.gradePercentages[grade];
@@ -154,7 +154,7 @@ export function UpsaSubjectGradeStackedColumns({
                                   );
                                 })}
                               </div>
-                              <span className="mt-3 text-center text-xs font-medium text-slate-700">{column.label}</span>
+                              <span className="mt-3 text-center text-xs font-semibold text-text-secondary">{column.label}</span>
                             </div>
                           ))}
                         </div>

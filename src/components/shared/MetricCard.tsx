@@ -7,17 +7,17 @@ export function MetricCard({
   value: React.ReactNode;
   tone?: "default" | "warning" | "success";
 }) {
-  const toneClass =
+  const accentClass =
     tone === "warning"
-      ? "border-amber-200 bg-white"
+      ? "border-l-warning"
       : tone === "success"
-        ? "border-emerald-200 bg-white"
-        : "bg-white";
+        ? "border-l-success"
+        : "border-l-primary-500";
 
   return (
-    <div className={`rounded-lg border p-4 ${toneClass}`}>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    <div className={`rounded-xl border border-border-default border-l-4 bg-surface-card p-4 shadow-raised ${accentClass}`}>
+      <p className="text-sm font-medium text-text-muted">{label}</p>
+      <p className="mt-2 font-display text-2xl font-bold tabular-nums text-text-primary">{value}</p>
     </div>
   );
 }

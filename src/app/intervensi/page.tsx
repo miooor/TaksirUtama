@@ -72,37 +72,37 @@ export default async function InterventionPage({
         description={`Semester ${semester} · ${year} · ${text(language, { ms: "Kenal pasti murid berulang merentas subjek dan utamakan tindakan bersama.", en: "Identify pupils repeated across subjects and prioritize coordinated action." })}`}
         icon={HeartHandshake}
         actions={
-          <><Link href={`/pbd/interventions/entry?year=${year}&semester=${semester}`} className="rounded-md border border-stone-300 px-3 py-2 font-medium">Isi Intervensi</Link><Link href={csvHref} className="action-primary inline-flex items-center gap-2"><Download className="h-4 w-4" />CSV</Link></>
+          <><Link href={`/pbd/interventions/entry?year=${year}&semester=${semester}`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-border-strong bg-surface-card px-3.5 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary">Isi Intervensi</Link><Link href={csvHref} className="inline-flex items-center gap-2 rounded-lg border border-primary-700 bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800"><Download className="h-4 w-4" />CSV</Link></>
         }
       />
 
-      <form className="mt-6 grid gap-3 rounded-lg border bg-white p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
+      <form className="mt-6 grid gap-3 rounded-xl border border-border-default bg-surface-card p-4 shadow-card md:grid-cols-[1fr_1fr_1fr_auto]">
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-500">{text(language, { ms: "Tahun", en: "Year" })}</span>
+          <span className="text-text-muted">{text(language, { ms: "Tahun", en: "Year" })}</span>
           <input type="hidden" name="year" value={year} /><input type="hidden" name="semester" value={semester} />
-          <select name="level" defaultValue={level ?? ""} className="rounded-md border bg-white px-3 py-2">
+          <select name="level" defaultValue={level ?? ""} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
             <option value="">{text(language, { ms: "Semua tahun", en: "All years" })}</option>
             {years.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-500">{text(language, { ms: "Kelas", en: "Class" })}</span>
-          <select name="classId" defaultValue={params.classId ?? className ?? ""} className="rounded-md border bg-white px-3 py-2">
+          <span className="text-text-muted">{text(language, { ms: "Kelas", en: "Class" })}</span>
+          <select name="classId" defaultValue={params.classId ?? className ?? ""} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
             <option value="">{text(language, { ms: "Semua kelas", en: "All classes" })}</option>
             {classes.map((item) => { const id = entries.find((entry) => entry.className === item)?.classId; return <option key={item} value={id ?? item}>{item}</option>; })}
           </select>
         </label>
         <label className="grid gap-1 text-sm">
-          <span className="text-slate-500">{text(language, { ms: "Subjek", en: "Subject" })}</span>
-          <select name="subjectId" defaultValue={params.subjectId ?? subject ?? ""} className="rounded-md border bg-white px-3 py-2">
+          <span className="text-text-muted">{text(language, { ms: "Subjek", en: "Subject" })}</span>
+          <select name="subjectId" defaultValue={params.subjectId ?? subject ?? ""} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
             <option value="">{text(language, { ms: "Semua subjek", en: "All subjects" })}</option>
             {subjects.map((item) => { const id = entries.find((entry) => entry.subjectCode === item)?.subjectId; return <option key={item} value={id ?? item}>{item}</option>; })}
           </select>
         </label>
         <div className="flex items-end gap-2">
-          <button className="action-primary w-full md:w-auto">{text(language, { ms: "Tapis", en: "Filter" })}</button>
+          <button className="inline-flex items-center justify-center rounded-lg border border-primary-700 bg-primary-700 px-4 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800 w-full md:w-auto">{text(language, { ms: "Tapis", en: "Filter" })}</button>
           {(level || params.classId || className || params.subjectId || subject) ? (
-            <Link href={`/intervensi?year=${year}&semester=${semester}`} className="rounded-md border px-3 py-2 text-sm">
+            <Link href={`/intervensi?year=${year}&semester=${semester}`} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-inset">
               {text(language, { ms: "Reset", en: "Reset" })}
             </Link>
           ) : null}
@@ -209,14 +209,14 @@ export default async function InterventionPage({
         </section>
       ) : null}
 
-      <section className="mt-6 overflow-hidden rounded-lg border bg-white">
-        <div className="border-b p-5">
+      <section className="mt-6 overflow-hidden rounded-xl border border-border-default bg-surface-card shadow-card">
+        <div className="border-b border-border-default p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-teal-700">
+              <p className="text-sm font-semibold text-primary-600">
                 {text(language, { ms: "Paparan risiko murid", en: "Pupil risk view" })}
               </p>
-              <h2 className="mt-1 text-lg font-semibold">
+              <h2 className="mt-1 font-display text-lg font-semibold text-text-primary">
                 {text(language, { ms: "Keutamaan pengukuhan", en: "Reinforcement priority" })}
               </h2>
             </div>
@@ -228,15 +228,15 @@ export default async function InterventionPage({
         </div>
 
         {analysis.pupils.length ? (
-          <div className="divide-y">
+          <div className="divide-y divide-border-default">
             {analysis.pupils.map((pupil) => (
               <details key={pupil.key} className="group">
-                <summary className="grid cursor-pointer list-none gap-3 px-5 py-4 md:grid-cols-[minmax(0,1.4fr)_0.8fr_0.7fr_1fr_0.5fr_0.9fr_0.9fr] md:items-center">
-                  <span className="font-medium">{pupil.studentName}</span>
-                  <span className="text-sm text-slate-600">{pupil.className}</span>
-                  <span className="text-sm">{pupil.subjectCount}</span>
-                  <span className="text-sm text-slate-600">{pupil.subjects.join(", ")}</span>
-                  <span className="text-sm">TP{pupil.lowestTp}</span>
+                <summary className="grid cursor-pointer list-none gap-3 px-5 py-4 transition-colors hover:bg-surface-inset/50 md:grid-cols-[minmax(0,1.4fr)_0.8fr_0.7fr_1fr_0.5fr_0.9fr_0.9fr] md:items-center">
+                  <span className="font-medium text-text-primary">{pupil.studentName}</span>
+                  <span className="text-sm text-text-muted">{pupil.className}</span>
+                  <span className="text-sm tabular-nums text-text-secondary">{pupil.subjectCount}</span>
+                  <span className="text-sm text-text-muted">{pupil.subjects.join(", ")}</span>
+                  <span className="text-sm font-medium tabular-nums text-text-secondary">TP{pupil.lowestTp}</span>
                   <span>
                     <StatusBadge tone={pupil.priority === "high" ? "warning" : "default"}>
                       {pupil.priority === "high"
@@ -254,10 +254,10 @@ export default async function InterventionPage({
                     </StatusBadge>
                   </span>
                 </summary>
-                <div className="bg-slate-50 px-5 pb-5">
+                <div className="bg-surface-inset/60 px-5 pb-5">
                   <div className="grid gap-3">
                     {pupil.entries.map((entry) => (
-                      <article key={`${pupil.key}-${entry.subjectCode}`} className="rounded-md border bg-white p-4">
+                      <article key={`${pupil.key}-${entry.subjectCode}`} className="rounded-lg border border-border-default bg-surface-card p-4">
                         {(() => {
                           const dialogRow = dialogRowByEntry.get(`${interventionPupilKey(entry)}|${entry.subjectCode}`);
                           return (
@@ -274,16 +274,16 @@ export default async function InterventionPage({
                         </div>
                         <dl className="mt-3 grid gap-3 text-sm md:grid-cols-3">
                           <div>
-                            <dt className="text-slate-500">{text(language, { ms: "Masalah", en: "Problem" })}</dt>
-                            <dd className="mt-1">{entry.problem}</dd>
+                            <dt className="text-text-muted">{text(language, { ms: "Masalah", en: "Problem" })}</dt>
+                            <dd className="mt-1 text-text-secondary">{entry.problem}</dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">{text(language, { ms: "Intervensi", en: "Intervention" })}</dt>
-                            <dd className="mt-1">{entry.intervention}</dd>
+                            <dt className="text-text-muted">{text(language, { ms: "Intervensi", en: "Intervention" })}</dt>
+                            <dd className="mt-1 text-text-secondary">{entry.intervention}</dd>
                           </div>
                           <div>
-                            <dt className="text-slate-500">Tindakan seterusnya</dt>
-                            <dd className="mt-1">
+                            <dt className="text-text-muted">Tindakan seterusnya</dt>
+                            <dd className="mt-1 text-text-secondary">
                               {dialogRow?.nextAction ?? "Sahkan punca isu dan pilih tindakan panitia yang sesuai."}
                             </dd>
                           </div>
@@ -299,7 +299,7 @@ export default async function InterventionPage({
             ))}
           </div>
         ) : (
-          <p className="p-5 text-sm text-slate-600">
+          <p className="p-5 text-sm text-text-muted">
             {text(language, {
               ms: "Tiada entri intervensi sepadan dengan tapisan semasa.",
               en: "No intervention entries match the current filters.",
@@ -356,19 +356,19 @@ function SummaryPanel({
   empty: string;
 }) {
   return (
-    <section className="rounded-lg border bg-white p-4">
-      <h2 className="font-semibold">{title}</h2>
+    <section className="rounded-xl border border-border-default bg-surface-card p-4 shadow-raised">
+      <h2 className="font-display font-semibold text-text-primary">{title}</h2>
       {rows.length ? (
         <dl className="mt-3 space-y-3 text-sm">
           {rows.map((row) => (
             <div key={`${row.label}-${row.value}`} className="flex items-start justify-between gap-3">
-              <dt>{row.label}</dt>
-              <dd className="text-slate-600">{row.value}</dd>
+              <dt className="text-text-secondary">{row.label}</dt>
+              <dd className="tabular-nums text-text-muted">{row.value}</dd>
             </div>
           ))}
         </dl>
       ) : (
-        <p className="mt-3 text-sm text-slate-600">{empty}</p>
+        <p className="mt-3 text-sm text-text-muted">{empty}</p>
       )}
     </section>
   );

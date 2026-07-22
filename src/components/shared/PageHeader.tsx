@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 export function PageHeader({
   eyebrow,
@@ -7,27 +8,33 @@ export function PageHeader({
   actions,
   icon: Icon,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
-  actions?: React.ReactNode;
+  actions?: ReactNode;
   icon?: LucideIcon;
 }) {
   return (
-    <div className="flex flex-col gap-4 border-b pb-5 md:flex-row md:items-end md:justify-between">
-      <div className="flex items-start gap-3">
+    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="flex min-w-0 items-start gap-3.5">
         {Icon ? (
-          <Icon className="mt-1 h-5 w-5 text-teal-700" />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 shadow-raised">
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </span>
         ) : null}
-        <div>
-          <h1 className="text-xl font-semibold tracking-normal">{title}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            <span className="font-medium text-teal-700">{eyebrow}</span>
-            {description ? ` · ${description}` : ""}
-          </p>
+        <div className="min-w-0">
+          {eyebrow ? (
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary-600">{eyebrow}</p>
+          ) : null}
+          <h1 className={`font-display text-2xl font-bold tracking-tight text-text-primary ${eyebrow ? "mt-0.5" : ""}`}>
+            {title}
+          </h1>
+          {description ? (
+            <p className="mt-1.5 max-w-2xl text-sm leading-5 text-text-muted">{description}</p>
+          ) : null}
         </div>
       </div>
-      {actions ? <div className="flex flex-wrap gap-2 text-sm">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }

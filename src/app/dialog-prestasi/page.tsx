@@ -1,9 +1,11 @@
-import Link from "next/link";
 import { BarChart3, Download, FileText, HeartHandshake, Presentation } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Alert } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs } from "@/components/ui/tabs";
 import { requireSchoolContext } from "@/lib/auth";
 import { listPeriodYears, resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
 import { resolveAssessmentSubjectCode } from "@/lib/insights/subjectMatching";
@@ -70,22 +72,20 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
         actions={<StatusBadge tone="success">{sortedSubjects.length} {text(language, { ms: "subjek", en: "subjects" })}</StatusBadge>}
       />
 
-      <nav className="mt-6 inline-flex rounded-lg border bg-white p-1" aria-label="Pentaksiran Dialog Prestasi">
-        {(["upsa", "uasa"] as const).map((item) => {
-          const selected = assessment === item;
-          const available = Boolean(resolveAssessmentPeriod(assessmentPeriods, year, item));
-          return (
-            <Link
-              key={item}
-              href={`/dialog-prestasi?year=${year}&semester=${selection.semester}&assessment=${item}`}
-              className={`rounded-md px-5 py-2 text-sm font-semibold transition ${selected ? "bg-teal-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}
-            >
-              {item.toUpperCase()}
-              {!available ? <span className="ml-2 text-[10px] font-normal opacity-75">Belum tersedia</span> : null}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="mt-6">
+        <Tabs
+          label="Pentaksiran Dialog Prestasi"
+          items={(["upsa", "uasa"] as const).map((item) => {
+            const available = Boolean(resolveAssessmentPeriod(assessmentPeriods, year, item));
+            return {
+              key: item,
+              label: <>{item.toUpperCase()}{!available ? <span className="ml-2 text-[10px] font-normal opacity-75">Belum tersedia</span> : null}</>,
+              href: `/dialog-prestasi?year=${year}&semester=${selection.semester}&assessment=${item}`,
+              active: assessment === item,
+            };
+          })}
+        />
+      </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
         <MetricCard label="Analisa Perbandingan TP" value={sortedSubjects.length} />
@@ -93,10 +93,9 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
         <MetricCard label="Murid intervensi" value={new Set(interventionData.entries.map(interventionPupilKey)).size} tone="warning" />
       </div>
 
-      <section className="mt-6 rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100">
-        <p className="font-semibold">Set dokumen setiap Ketua Panitia</p>
-        <p className="mt-1">1. Analisa Perbandingan TP semua tahun · 2. Analisa Perbandingan {assessmentLabel} Tahun 4, 5 dan 6 · 3. Intervensi dan Isu disusun mengikut tahun dan kelas.</p>
-      </section>
+      <Alert variant="info" title="Set dokumen setiap Ketua Panitia" className="mt-6">
+        1. Analisa Perbandingan TP semua tahun · 2. Analisa Perbandingan {assessmentLabel} Tahun 4, 5 dan 6 · 3. Intervensi dan Isu disusun mengikut tahun dan kelas.
+      </Alert>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         {sortedSubjects.map((subjectCode) => {
@@ -105,36 +104,38 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
           const base = `/api/dialog-prestasi/${year}/subjects/${encodeURIComponent(subjectCode)}`;
           const comparisonHref = `/api/dialog-prestasi/${year}/${assessment}/subjects/${encodeURIComponent(subjectCode)}/comparison`;
           return (
-            <article key={subjectCode} className="rounded-xl border bg-white p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-teal-700">{subjectCode}</p>
-                  <h2 className="mt-1 text-lg font-semibold">{subjectNames[subjectCode] ?? subjectCode}</h2>
+            <Card key={subjectCode}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-primary-600">{subjectCode}</p>
+                    <h2 className="mt-1 font-display text-lg font-semibold text-text-primary">{subjectNames[subjectCode] ?? subjectCode}</h2>
+                  </div>
+                  <StatusBadge tone={interventionCount ? "warning" : "success"}>{interventionCount} intervensi</StatusBadge>
                 </div>
-                <StatusBadge tone={interventionCount ? "warning" : "success"}>{interventionCount} intervensi</StatusBadge>
-              </div>
 
-              <div className="mt-5 grid gap-3">
-                <DownloadCard
-                  href={`/api/pbd/periods/${year}/reports/subjects/${encodeURIComponent(subjectCode)}/pdf?semester=${selection.semester}`}
-                  icon={BarChart3}
-                  title="1. Analisa Perbandingan TP"
-                  description="Carta bar dan jadual perbandingan kelas bagi setiap tahun menggunakan data PBD."
-                />
-                <DownloadCard
-                  href={assessmentSubjectCode && assessmentPeriod ? comparisonHref : null}
-                  icon={FileText}
-                  title={`2. Analisa Perbandingan ${assessmentLabel}`}
-                  description={assessmentSubjectCode && assessmentPeriod ? `Carta dan jadual gred Tahun 4, 5 dan 6 (${assessmentSubjectCode}).` : `Tiada subjek ${assessmentLabel} yang sepadan atau tempoh belum tersedia.`}
-                />
-                <DownloadCard
-                  href={`${base}/intervention?semester=${selection.semester}`}
-                  icon={HeartHandshake}
-                  title="3. Intervensi dan Isu"
-                  description="Senarai murid TP1 dan TP2, masalah dan intervensi mengikut tahun serta kelas."
-                />
-              </div>
-            </article>
+                <div className="mt-5 grid gap-3">
+                  <DownloadCard
+                    href={`/api/pbd/periods/${year}/reports/subjects/${encodeURIComponent(subjectCode)}/pdf?semester=${selection.semester}`}
+                    icon={BarChart3}
+                    title="1. Analisa Perbandingan TP"
+                    description="Carta bar dan jadual perbandingan kelas bagi setiap tahun menggunakan data PBD."
+                  />
+                  <DownloadCard
+                    href={assessmentSubjectCode && assessmentPeriod ? comparisonHref : null}
+                    icon={FileText}
+                    title={`2. Analisa Perbandingan ${assessmentLabel}`}
+                    description={assessmentSubjectCode && assessmentPeriod ? `Carta dan jadual gred Tahun 4, 5 dan 6 (${assessmentSubjectCode}).` : `Tiada subjek ${assessmentLabel} yang sepadan atau tempoh belum tersedia.`}
+                  />
+                  <DownloadCard
+                    href={`${base}/intervention?semester=${selection.semester}`}
+                    icon={HeartHandshake}
+                    title="3. Intervensi dan Isu"
+                    description="Senarai murid TP1 dan TP2, masalah dan intervensi mengikut tahun serta kelas."
+                  />
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
@@ -142,20 +143,20 @@ export default async function DialogPrestasiPage({ searchParams }: { searchParam
   );
 }
 
-export function DownloadCard({ href, icon: Icon, title, description }: { href: string | null; icon: typeof Download; title: string; description: string }) {
+function DownloadCard({ href, icon: Icon, title, description }: { href: string | null; icon: typeof Download; title: string; description: string }) {
   const content = (
     <>
-      <span className="rounded-md bg-teal-50 p-2 text-teal-700"><Icon className="h-4 w-4" /></span>
+      <span className="rounded-lg bg-primary-50 p-2 text-primary-600"><Icon className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1">
-        <span className="block font-medium">{title}</span>
-        <span className="mt-0.5 block text-xs text-slate-500">{description}</span>
+        <span className="block font-medium text-text-primary">{title}</span>
+        <span className="mt-0.5 block text-xs leading-4 text-text-muted">{description}</span>
       </span>
-      <Download className="h-4 w-4 shrink-0" />
+      <Download className="h-4 w-4 shrink-0 text-text-disabled" />
     </>
   );
   return href ? (
-    <a href={href} className="flex items-center gap-3 rounded-lg border p-3 transition hover:border-teal-300 hover:bg-teal-50/40">{content}</a>
+    <a href={href} className="flex items-center gap-3 rounded-lg border border-border-default p-3 transition-colors hover:border-primary-300 hover:bg-primary-50/40">{content}</a>
   ) : (
-    <div className="flex cursor-not-allowed items-center gap-3 rounded-lg border bg-slate-50 p-3 text-slate-400">{content}</div>
+    <div className="flex cursor-not-allowed items-center gap-3 rounded-lg border border-border-default bg-surface-inset p-3 opacity-60">{content}</div>
   );
 }

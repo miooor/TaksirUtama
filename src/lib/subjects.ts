@@ -1,3 +1,12 @@
+/** Per-school subject record from the school_subjects table. */
+export type SchoolSubjectRecord = {
+  id: string;
+  code: string;
+  name: string;
+  aliases: string[];
+  active: boolean;
+};
+
 const aliases: Record<string, string> = {
   BAHASAMELAYU: "BM",
   BM: "BM",
@@ -62,7 +71,28 @@ export function normalizeSubjectCode(value: unknown) {
   return aliases[subjectAliasKey(raw)] ?? raw;
 }
 
-export function subjectDisplayName(value: unknown) {
+export function subjectDisplayName(value: unknown, schoolSubjects?: SchoolSubjectRecord[]) {
   const code = normalizeSubjectCode(value);
+  if (schoolSubjects) {
+    const match = schoolSubjects.find((s) => s.code === code);
+    if (match) return match.name;
+  }
   return subjectNames[code] ?? (String(value ?? code).trim() || code);
+}
+
+/**
+ * Resolve a raw subject label against a school's configured subjects.
+ * Checks the school's aliases first, then falls back to the global alias map.
+ * Returns the canonical school subject code, or the normalized global code.
+ */
+export function resolveSubjectFromSchool(schoolSubjects: SchoolSubjectRecord[], rawLabel: unknown): string {
+  const key = subjectAliasKey(rawLabel);
+  if (!key) return String(rawLabel ?? "").trim();
+  for (const subject of schoolSubjects) {
+    if (subjectAliasKey(subject.code) === key) return subject.code;
+    if (subject.aliases.some((alias) => subjectAliasKey(alias) === key)) return subject.code;
+    if (subjectAliasKey(subject.name) === key) return subject.code;
+  }
+  // Fall back to global alias resolution
+  return normalizeSubjectCode(rawLabel);
 }

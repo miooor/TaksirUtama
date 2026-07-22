@@ -1,7 +1,7 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { getAssessmentApiContext, reportAssessmentName } from "@/lib/assessmentApi";
 import { calculateUpsaClassAnalysis } from "@/lib/upsa/calculateUpsaClassAnalysis";
-import { getAssessmentClassResultWithRegistry } from "@/lib/upsa/data";
+import { getAssessmentClassResultHybrid } from "@/lib/upsa/data";
 import { SkspsUpsaAnalysisReportTemplate } from "@/pdf/templates/SkspsUpsaAnalysisReportTemplate";
 import { schoolReportFilename } from "@/lib/reportFilename";
 
@@ -11,7 +11,7 @@ export async function GET(
 ) {
   const { className } = await params;
   const { context, school, period } = await getAssessmentApiContext(params);
-  const result = await getAssessmentClassResultWithRegistry(context, period, decodeURIComponent(className));
+  const result = await getAssessmentClassResultHybrid(context, period, decodeURIComponent(className));
   const analysis = calculateUpsaClassAnalysis(result);
   const buffer = await renderToBuffer(SkspsUpsaAnalysisReportTemplate({ result, analysis, period, school }));
   return new Response(new Uint8Array(buffer), {

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { AppShell } from "@/components/shared/AppShell";
 import { ComparisonBarChart } from "@/components/shared/ComparisonBarChart";
 import { ExportMeta } from "@/components/shared/ExportMeta";
@@ -6,6 +5,9 @@ import { MetricCard } from "@/components/shared/MetricCard";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { SimpleBarChart } from "@/components/shared/SimpleBarChart";
 import { StackedBarChart } from "@/components/shared/StackedBarChart";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, TableShell, TD, TH, THead, TRow } from "@/components/ui/table";
 import { getAssessmentClassResult } from "@/lib/upsa/data";
 import { calculateUpsaClassAnalysis } from "@/lib/upsa/calculateUpsaClassAnalysis";
 import { assessmentApiBasePath, assessmentClassPath, getAssessmentPageContext } from "@/lib/assessmentPages";
@@ -13,12 +15,12 @@ import { assessmentLabel } from "@/lib/config/periods";
 
 const gradeOrder = ["A", "B", "C", "D", "E", "F"];
 const gradeColors = {
-  A: "bg-emerald-600",
-  B: "bg-teal-500",
-  C: "bg-sky-500",
-  D: "bg-amber-400",
-  E: "bg-orange-500",
-  F: "bg-rose-600",
+  A: "bg-success",
+  B: "bg-primary-500",
+  C: "bg-info",
+  D: "bg-accent-400",
+  E: "bg-accent-600",
+  F: "bg-danger",
 } as const;
 
 export default async function AssessmentAnalysisPage({
@@ -41,11 +43,11 @@ export default async function AssessmentAnalysisPage({
         description={period.examName}
         actions={
           <>
-            <Link href={classPath} className="rounded-md border px-3 py-2">Kembali ke kelas</Link>
-            <a href={`${apiBase}/reports/${encodeURIComponent(result.className)}/analysis-csv`} className="rounded-md border px-3 py-2">
+            <Button variant="outline" size="sm" href={classPath}>Kembali ke kelas</Button>
+            <Button variant="outline" size="sm" href={`${apiBase}/reports/${encodeURIComponent(result.className)}/analysis-csv`}>
               Muat turun CSV
-            </a>
-            <a href={`${apiBase}/reports/${encodeURIComponent(result.className)}/analysis-pdf`} className="action-accent">
+            </Button>
+            <a href={`${apiBase}/reports/${encodeURIComponent(result.className)}/analysis-pdf`} className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-700 bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800">
               Muat turun PDF analisis
             </a>
           </>
@@ -66,54 +68,49 @@ export default async function AssessmentAnalysisPage({
       </div>
       <div className="mt-6"><ExportMeta /></div>
 
-      <section className="mt-6 overflow-hidden rounded-lg border bg-white">
-        <div className="border-b px-5 py-4">
-          <h2 className="text-lg font-semibold">Prestasi mengikut subjek</h2>
-        </div>
+      <TableShell className="mt-6">
+        <CardHeader className="border-b border-border-default px-5 py-4">
+          <CardTitle>Prestasi mengikut subjek</CardTitle>
+        </CardHeader>
         <div className="overflow-x-auto">
-          <table className="min-w-[42rem] w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600">
+          <DataTable className="min-w-[42rem]">
+            <THead>
               <tr>
-                <th className="px-4 py-3">Subjek</th>
-                <th className="px-4 py-3">Diisi</th>
-                <th className="px-4 py-3">Hilang</th>
-                <th className="px-4 py-3">TH</th>
-                <th className="px-4 py-3">Purata</th>
-                <th className="px-4 py-3">Tertinggi</th>
-                <th className="px-4 py-3">Terendah</th>
-                <th className="px-4 py-3">Lulus</th>
+                <TH>Subjek</TH><TH>Diisi</TH><TH>Hilang</TH><TH>TH</TH><TH>Purata</TH><TH>Tertinggi</TH><TH>Terendah</TH><TH>Lulus</TH>
               </tr>
-            </thead>
+            </THead>
             <tbody>
               {analysis.subjectAnalyses.map((subject) => (
-                <tr key={subject.subjectCode} className="border-t">
-                  <td className="px-4 py-3 font-medium">{subject.subjectCode}</td>
-                  <td className="px-4 py-3">{subject.enteredCount}</td>
-                  <td className="px-4 py-3">{subject.missingCount}</td>
-                  <td className="px-4 py-3">{subject.absentCount}</td>
-                  <td className="px-4 py-3">{subject.average?.toFixed(1) ?? "-"}</td>
-                  <td className="px-4 py-3">{subject.highestMark ?? "-"}</td>
-                  <td className="px-4 py-3">{subject.lowestMark ?? "-"}</td>
-                  <td className="px-4 py-3">{subject.passPercentage?.toFixed(1) ?? "-"}%</td>
-                </tr>
+                <TRow key={subject.subjectCode}>
+                  <TD className="font-medium text-text-primary">{subject.subjectCode}</TD>
+                  <TD className="tabular-nums">{subject.enteredCount}</TD>
+                  <TD className="tabular-nums">{subject.missingCount}</TD>
+                  <TD className="tabular-nums">{subject.absentCount}</TD>
+                  <TD className="tabular-nums">{subject.average?.toFixed(1) ?? "-"}</TD>
+                  <TD className="tabular-nums">{subject.highestMark ?? "-"}</TD>
+                  <TD className="tabular-nums">{subject.lowestMark ?? "-"}</TD>
+                  <TD className="tabular-nums">{subject.passPercentage?.toFixed(1) ?? "-"}%</TD>
+                </TRow>
               ))}
             </tbody>
-          </table>
+          </DataTable>
         </div>
-      </section>
+      </TableShell>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-        <section className="rounded-lg border bg-white p-5">
-          <h2 className="text-lg font-semibold">Taburan gred keseluruhan</h2>
-          <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {gradeOrder.map((grade) => (
-              <div key={grade} className="rounded-md bg-slate-50 p-3 text-center">
-                <p className="text-sm text-slate-500">{grade}</p>
-                <p className="mt-1 text-xl font-semibold">{analysis.overallGradeDistribution[grade] ?? 0}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        <Card>
+          <CardHeader><CardTitle>Taburan gred keseluruhan</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+              {gradeOrder.map((grade) => (
+                <div key={grade} className="rounded-lg bg-surface-inset p-3 text-center">
+                  <p className="text-sm font-medium text-text-muted">{grade}</p>
+                  <p className="mt-1 font-display text-xl font-bold tabular-nums text-text-primary">{analysis.overallGradeDistribution[grade] ?? 0}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
         <SimpleBarChart
           title="Purata subjek"
           data={analysis.subjectAnalyses
@@ -145,8 +142,8 @@ export default async function AssessmentAnalysisPage({
             },
           }))}
           series={[
-            { key: "average", label: "Purata", colorClassName: "bg-teal-700" },
-            { key: "passRate", label: "Lulus", colorClassName: "bg-sky-500" },
+            { key: "average", label: "Purata", colorClassName: "bg-primary-600" },
+            { key: "passRate", label: "Lulus", colorClassName: "bg-info" },
           ]}
         />
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CalendarDays, Check } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { Language } from "@/lib/i18n";
@@ -63,19 +64,20 @@ export function YearMenu({
 
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen((value) => !value)} className="rounded-md border px-3 py-1.5 text-sm">
-        {language === "en" ? "Year" : "Tahun"} {current}
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center justify-between gap-2 rounded-lg border border-border-default px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-inset hover:text-text-primary" aria-expanded={open}>
+        <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-text-muted" />{language === "en" ? "Year" : "Tahun"} {current}</span>
       </button>
       {open ? (
-        <div className="absolute right-0 top-full z-20 mt-2 w-40 rounded-md border bg-white p-2 text-sm shadow-lg">
+        <div className="absolute right-0 top-full z-20 mt-2 w-40 rounded-lg border border-border-default bg-surface-overlay p-1.5 text-sm shadow-overlay animate-fade-in">
           {years.map((year) => (
             <Link
               key={year}
               href={hrefForYear(pathname, searchParams, year, uasaReadyYears)}
               onClick={() => setOpen(false)}
-              className={`block rounded-md px-3 py-2 ${year === current ? "bg-teal-50 font-medium text-teal-800" : "hover:bg-slate-50"}`}
+              className={`flex items-center justify-between rounded-md px-3 py-2 transition-colors ${year === current ? "bg-primary-50 font-semibold text-primary-700" : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"}`}
             >
               {year}
+              {year === current ? <Check className="h-3.5 w-3.5" /> : null}
             </Link>
           ))}
         </div>

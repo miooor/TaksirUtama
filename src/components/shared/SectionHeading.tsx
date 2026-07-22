@@ -3,14 +3,14 @@ import type { LucideIcon } from "lucide-react";
 type Tone = "teal" | "sky" | "amber" | "rose" | "emerald" | "violet" | "cyan" | "indigo";
 
 const toneClasses: Record<Tone, string> = {
-  teal: "text-teal-700",
-  sky: "text-sky-700",
-  amber: "text-amber-700",
-  rose: "text-rose-700",
-  emerald: "text-emerald-700",
-  violet: "text-violet-700",
-  cyan: "text-cyan-700",
-  indigo: "text-indigo-700",
+  teal: "bg-primary-50 text-primary-600",
+  sky: "bg-info-surface text-info",
+  amber: "bg-accent-50 text-accent-600",
+  rose: "bg-danger-surface text-danger",
+  emerald: "bg-success-surface text-success",
+  violet: "bg-primary-50 text-primary-500",
+  cyan: "bg-info-surface text-info-strong",
+  indigo: "bg-primary-50 text-primary-700",
 };
 
 export function SectionHeading({
@@ -26,10 +26,12 @@ export function SectionHeading({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <Icon className={`mt-0.5 h-5 w-5 ${toneClasses[tone]}`} />
-      <div>
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${toneClasses[tone]}`}>
+        <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <h2 className="font-display text-lg font-semibold text-text-primary">{title}</h2>
+        {description ? <p className="mt-1 text-sm leading-5 text-text-muted">{description}</p> : null}
       </div>
     </div>
   );

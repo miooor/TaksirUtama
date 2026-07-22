@@ -3,41 +3,211 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import {
+  BarChart3,
+  ClipboardList,
+  HeartHandshake,
+  LayoutDashboard,
+  Lightbulb,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PenLine,
+  PieChart,
+  Presentation,
+  Settings2,
+  TrendingUp,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 type Props = { schoolName: string; systemName: string; logoPath: string; year: string; controls: ReactNode };
 
-function NavLinks({ year, onNavigate }: { year: string; onNavigate?: () => void }) {
-  const pathname = usePathname();
-  const query = useSearchParams();
-  const selectedYear = query.get("year") ?? year;
-  const selectedSemester = query.get("semester") === "2" ? "2" : "1";
-  const groups = [
-    [{ label: "Dashboard", href: `/dashboard?year=${selectedYear}&semester=${selectedSemester}`, active: pathname === "/dashboard" }],
-    [{ label: "UPSA", href: `/assessments/${selectedYear}/upsa/classes`, active: pathname.includes("/upsa") || pathname.startsWith("/upsa") }, { label: "UASA", href: `/assessments/${selectedYear}/uasa/classes`, active: pathname.includes("/uasa") || pathname.startsWith("/uasa") }],
-    [{ label: "Isi Rumusan TP", href: `/pbd/entry?year=${selectedYear}&semester=${selectedSemester}`, active: pathname === "/pbd/entry" }, { label: "Isi Intervensi", href: `/pbd/interventions/entry?year=${selectedYear}&semester=${selectedSemester}`, active: pathname === "/pbd/interventions/entry" }, { label: "Analisis PBD", href: `/pbd/periods/${selectedYear}?semester=${selectedSemester}`, active: pathname.startsWith("/pbd/periods") }],
-    [{ label: "Setup Sekolah", href: `/school/setup?year=${selectedYear}&semester=${selectedSemester}`, active: pathname.startsWith("/school/setup") || pathname === "/pbd/setup" }],
-    [{ label: "Dialog Prestasi", href: `/dialog-prestasi?year=${selectedYear}&semester=${selectedSemester}`, active: pathname.startsWith("/dialog-prestasi") }, { label: "Intervensi", href: `/intervensi?year=${selectedYear}&semester=${selectedSemester}`, active: pathname.startsWith("/intervensi") }, { label: "Dapatan", href: `/insights?year=${selectedYear}&semester=${selectedSemester}`, active: pathname.startsWith("/insights") }],
+type NavItem = { label: string; href: string; icon: LucideIcon; active: boolean };
+type NavGroup = { title: string | null; items: NavItem[] };
+
+function buildNavGroups(year: string, semester: string, pathname: string): NavGroup[] {
+  return [
+    {
+      title: null,
+      items: [
+        { label: "Dashboard", href: `/dashboard?year=${year}&semester=${semester}`, icon: LayoutDashboard, active: pathname === "/dashboard" },
+      ],
+    },
+    {
+      title: "Pengisian",
+      items: [
+        { label: "Isi Markah UPSA", href: `/assessments/${year}/upsa/entry`, icon: PenLine, active: pathname.includes("/upsa/entry") },
+        { label: "Isi Markah UASA", href: `/assessments/${year}/uasa/entry`, icon: PenLine, active: pathname.includes("/uasa/entry") },
+        { label: "Isi Rumusan TP", href: `/pbd/entry?year=${year}&semester=${semester}`, icon: ClipboardList, active: pathname === "/pbd/entry" },
+        { label: "Isi Intervensi", href: `/pbd/interventions/entry?year=${year}&semester=${semester}`, icon: HeartHandshake, active: pathname === "/pbd/interventions/entry" },
+      ],
+    },
+    {
+      title: "Analisis",
+      items: [
+        { label: "Analisis UPSA", href: `/assessments/${year}/upsa/classes`, icon: BarChart3, active: pathname.includes("/upsa/classes") },
+        { label: "Analisis UASA", href: `/assessments/${year}/uasa/classes`, icon: TrendingUp, active: pathname.includes("/uasa/classes") },
+        { label: "Analisis PBD", href: `/pbd/periods/${year}?semester=${semester}`, icon: PieChart, active: pathname.startsWith("/pbd/periods") },
+      ],
+    },
+    {
+      title: "Laporan",
+      items: [
+        { label: "Dialog Prestasi", href: `/dialog-prestasi?year=${year}&semester=${semester}`, icon: Presentation, active: pathname.startsWith("/dialog-prestasi") },
+        { label: "Intervensi", href: `/intervensi?year=${year}&semester=${semester}`, icon: Users, active: pathname.startsWith("/intervensi") },
+        { label: "Dapatan", href: `/insights?year=${year}&semester=${semester}`, icon: Lightbulb, active: pathname.startsWith("/insights") },
+      ],
+    },
+    {
+      title: "Tadbir",
+      items: [
+        { label: "Setup Sekolah", href: `/school/setup?year=${year}&semester=${semester}`, icon: Settings2, active: pathname.startsWith("/school/setup") || pathname === "/pbd/setup" },
+      ],
+    },
   ];
-  return <nav aria-label="Navigasi utama" className="space-y-4">{groups.map((group, index) => <div key={index} className="space-y-1">{group.map((item) => <Link key={item.href} href={item.href} onClick={onNavigate} className={`block rounded-md px-3 py-2 text-sm ${item.active ? "font-semibold text-teal-900" : "text-slate-600 hover:bg-stone-100 hover:text-slate-950"}`}>{item.label}</Link>)}</div>)}</nav>;
 }
 
-function Identity({ schoolName, systemName, logoPath, year }: Omit<Props, "controls">) {
+function Identity({ schoolName, systemName, logoPath, year, collapsed }: Omit<Props, "controls"> & { collapsed?: boolean }) {
   const query = useSearchParams();
   const selectedYear = query.get("year") ?? year;
   const semester = query.get("semester") === "2" ? "2" : "1";
-  return <Link href={`/dashboard?year=${selectedYear}&semester=${semester}`} className="flex min-w-0 items-start gap-3"><Image src={logoPath} alt="" width={40} height={40} className="mt-0.5 h-10 w-10 shrink-0 object-contain" /><div className="min-w-0"><p className="break-words text-sm font-medium leading-5 text-slate-700">{schoolName}</p><p className="mt-0.5 break-words text-base font-semibold leading-5 text-slate-950">{systemName}</p></div></Link>;
+  return (
+    <Link href={`/dashboard?year=${selectedYear}&semester=${semester}`} className="flex min-w-0 items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-inset">
+      <Image src={logoPath} alt="" width={36} height={36} className="h-9 w-9 shrink-0 rounded-md object-contain" />
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate font-display text-sm font-semibold leading-5 text-text-primary">{systemName}</p>
+          <p className="truncate text-xs leading-4 text-text-muted">{schoolName}</p>
+        </div>
+      )}
+    </Link>
+  );
 }
 
-function SidebarContents({ schoolName, systemName, logoPath, year, controls, onNavigate }: Props & { onNavigate?: () => void }) {
-  return <div className="flex h-full min-h-0 flex-col"><Identity schoolName={schoolName} systemName={systemName} logoPath={logoPath} year={year} /><div className="mt-8 min-h-0 flex-1 overflow-y-auto"><NavLinks year={year} onNavigate={onNavigate} /></div><div className="mt-6 space-y-2 border-t border-stone-200 pt-4">{controls}</div></div>;
+function SidebarNav({ year, collapsed, onNavigate }: { year: string; collapsed?: boolean; onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const query = useSearchParams();
+  const selectedYear = query.get("year") ?? year;
+  const semester = query.get("semester") === "2" ? "2" : "1";
+  const groups = buildNavGroups(selectedYear, semester, pathname);
+
+  return (
+    <nav aria-label="Navigasi utama" className="space-y-5">
+      {groups.map((group, index) => (
+        <div key={index}>
+          {group.title && !collapsed && (
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-text-disabled">{group.title}</p>
+          )}
+          {group.title && collapsed && index > 0 && <div className="mx-3 mb-2 border-t border-border-default" />}
+          <div className="space-y-0.5">
+            {group.items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                title={collapsed ? item.label : undefined}
+                aria-current={item.active ? "page" : undefined}
+                className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                  collapsed ? "justify-center px-2" : ""
+                } ${
+                  item.active
+                    ? "bg-primary-50 font-semibold text-primary-700"
+                    : "text-text-secondary hover:bg-surface-inset hover:text-text-primary"
+                }`}
+              >
+                {item.active && <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-primary-600" aria-hidden="true" />}
+                <item.icon className={`h-[18px] w-[18px] shrink-0 ${item.active ? "text-primary-600" : "text-text-muted group-hover:text-text-secondary"}`} />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function SidebarContents({ schoolName, systemName, logoPath, year, controls, collapsed, onToggle, onNavigate }: Props & { collapsed: boolean; onToggle: () => void; onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center justify-between gap-2 pr-1">
+        <div className="min-w-0 flex-1"><Identity schoolName={schoolName} systemName={systemName} logoPath={logoPath} year={year} collapsed={collapsed} /></div>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="hidden shrink-0 rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface-inset hover:text-text-primary lg:block"
+          aria-label={collapsed ? "Kembangkan navigasi" : "Kecilkan navigasi"}
+        >
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
+      </div>
+      <div className="mt-6 min-h-0 flex-1 overflow-y-auto pb-2">
+        <SidebarNav year={year} collapsed={collapsed} onNavigate={onNavigate} />
+      </div>
+      <div className="mt-4 space-y-2 border-t border-border-default pt-4">
+        {controls}
+        <p className="px-1 text-[10px] leading-4 text-text-disabled">Dibina oleh guru untuk guru 🇲🇾</p>
+      </div>
+    </div>
+  );
 }
 
 export function AppSidebar(props: Props) {
-  return <>
-    <aside className="sticky top-0 hidden h-screen shrink-0 border-r border-stone-200 bg-stone-50 p-5 lg:block lg:w-52 xl:w-60"><SidebarContents {...props} /></aside>
-    <div className="sticky top-0 z-30 flex min-w-0 items-center justify-between border-b border-stone-200 bg-stone-50 px-4 py-3 lg:hidden"><Identity schoolName={props.schoolName} systemName={props.systemName} logoPath={props.logoPath} year={props.year} /><Dialog.Root><Dialog.Trigger asChild><button type="button" className="ml-3 shrink-0 rounded-md border border-stone-300 p-2 text-slate-800" aria-label="Buka navigasi"><Menu className="h-5 w-5" /></button></Dialog.Trigger><Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-40 bg-slate-950/25" /><Dialog.Content className="fixed inset-y-0 left-0 z-50 w-[min(22rem,calc(100vw-2rem))] bg-stone-50 p-5 outline-none"><div className="flex h-full min-h-0 flex-col"><div className="flex items-start justify-between gap-3"><Dialog.Title className="sr-only">Navigasi</Dialog.Title><Identity schoolName={props.schoolName} systemName={props.systemName} logoPath={props.logoPath} year={props.year} /><Dialog.Close asChild><button type="button" className="shrink-0 rounded-md border border-stone-300 p-2 text-slate-800" aria-label="Tutup navigasi"><X className="h-5 w-5" /></button></Dialog.Close></div><div className="mt-6 min-h-0 flex-1 overflow-y-auto"><NavLinks year={props.year} onNavigate={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))} /></div><div className="mt-6 space-y-2 border-t border-stone-200 pt-4">{props.controls}</div></div></Dialog.Content></Dialog.Portal></Dialog.Root></div>
-  </>;
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("ssp-sidebar") === "collapsed"; } catch { return false; }
+  });
+  function toggle() {
+    setCollapsed((value) => {
+      try { localStorage.setItem("ssp-sidebar", value ? "expanded" : "collapsed"); } catch { /* ignore */ }
+      return !value;
+    });
+  }
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className={`sticky top-0 hidden h-screen shrink-0 border-r border-border-default bg-surface-card p-4 transition-[width] duration-200 lg:block ${collapsed ? "w-[4.75rem]" : "w-64 xl:w-[17rem]"}`}
+      >
+        <SidebarContents {...props} collapsed={collapsed} onToggle={toggle} />
+      </aside>
+
+      {/* Mobile header + drawer */}
+      <div className="sticky top-0 z-30 flex min-w-0 items-center justify-between border-b border-border-default bg-surface-card px-4 py-2.5 shadow-raised lg:hidden">
+        <Identity schoolName={props.schoolName} systemName={props.systemName} logoPath={props.logoPath} year={props.year} />
+        <Dialog.Root>
+          <Dialog.Trigger asChild>
+            <button type="button" className="ml-3 shrink-0 rounded-lg border border-border-default p-2 text-text-secondary transition-colors hover:bg-surface-inset" aria-label="Buka navigasi">
+              <Menu className="h-5 w-5" />
+            </button>
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-40 bg-primary-950/40 backdrop-blur-[2px]" />
+            <Dialog.Content className="fixed inset-y-0 left-0 z-50 w-[min(20rem,calc(100vw-3rem))] bg-surface-card p-4 shadow-overlay outline-none">
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="flex items-start justify-between gap-3">
+                  <Dialog.Title className="sr-only">Navigasi</Dialog.Title>
+                  <div className="min-w-0 flex-1"><Identity schoolName={props.schoolName} systemName={props.systemName} logoPath={props.logoPath} year={props.year} /></div>
+                  <Dialog.Close asChild>
+                    <button type="button" className="shrink-0 rounded-lg border border-border-default p-2 text-text-secondary transition-colors hover:bg-surface-inset" aria-label="Tutup navigasi">
+                      <X className="h-5 w-5" />
+                    </button>
+                  </Dialog.Close>
+                </div>
+                <div className="mt-5 min-h-0 flex-1 overflow-y-auto">
+                  <SidebarNav year={props.year} onNavigate={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))} />
+                </div>
+                <div className="mt-4 space-y-2 border-t border-border-default pt-4">{props.controls}</div>
+              </div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      </div>
+    </>
+  );
 }

@@ -1,8 +1,10 @@
-import Link from "next/link";
-import { BarChart3, UsersRound } from "lucide-react";
+import { BarChart3, PenLine, UsersRound } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { UpsaReadinessPanel } from "@/components/upsa/UpsaReadinessPanel";
 import { AssessmentYearClassGradeReport } from "@/components/upsa/AssessmentYearClassGradeReport";
 import { HeatmapTable } from "@/components/shared/HeatmapTable";
@@ -29,49 +31,58 @@ export default async function AssessmentClassesPage({ params }: { params: Promis
         eyebrow={`${label} ${period.year}`}
         title={text(language, { ms: "Pilih kelas", en: "Choose class" })}
         description={period.examName}
-        actions={<StatusBadge tone="success">{classes.length} {text(language, { ms: "kelas tersedia", en: "classes available" })}</StatusBadge>}
+        actions={<div className="flex items-center gap-2"><Button variant="outline" size="sm" icon={PenLine} href={`${assessmentBasePath(period)}/entry`}>{text(language, { ms: "Isi markah", en: "Enter marks" })}</Button><StatusBadge tone="success">{classes.length} {text(language, { ms: "kelas tersedia", en: "classes available" })}</StatusBadge></div>}
         icon={UsersRound}
       />
 
-      {!results.length ? <section className="mt-6 rounded-lg bg-white p-5"><h2 className="font-semibold">Daftar murid sekolah</h2><p className="mt-2 text-sm text-slate-600">Sediakan roster pusat sekarang supaya rekod murid boleh dipadankan apabila aliran pangkalan data {label} dibuka.</p><Link href={`/school/setup?year=${period.year}&view=pupils`} className="mt-4 inline-block text-sm font-medium text-teal-900">Buka Murid dalam Setup Sekolah</Link></section> : null}
+      {!results.length ? (
+        <EmptyState
+          icon={UsersRound}
+          title="Daftar murid sekolah"
+          description={`Sediakan roster pusat sekarang supaya rekod murid boleh dipadankan apabila aliran pangkalan data ${label} dibuka.`}
+          className="mt-6"
+          action={<Button variant="secondary" href={`/school/setup?year=${period.year}&view=pupils`}>Buka Murid dalam Setup Sekolah</Button>}
+        />
+      ) : null}
 
       <div className="mt-6 space-y-6">
         {[...grouped.entries()].map(([level, levelClasses]) => (
           <section key={level}>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">{text(language, { ms: "Tahun", en: "Year" })} {level}</h2>
-              <Link href={assessmentYearPath(period, level)} className="action-secondary gap-2 text-sm">
-                <BarChart3 className="h-4 w-4" />
+              <h2 className="font-display text-lg font-semibold text-text-primary">{text(language, { ms: "Tahun", en: "Year" })} {level}</h2>
+              <Button variant="outline" size="sm" icon={BarChart3} href={assessmentYearPath(period, level)}>
                 {text(language, { ms: "Analisis seluruh tahun", en: "Whole-year analysis" })}
-              </Link>
+              </Button>
             </div>
             <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {levelClasses.map((result) => (
-                <article key={result.className} className="flex h-full flex-col rounded-lg border bg-white p-5">
-                  <div className="flex items-center gap-3">
-                    <UsersRound className="h-5 w-5 text-teal-700" />
-                    <h3 className="text-lg font-semibold">{result.className}</h3>
-                  </div>
-                  <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 text-sm">
-                    <dt className="text-slate-500">{text(language, { ms: "Pentaksiran", en: "Assessment" })}</dt>
-                    <dd>{result.assessmentName || label}</dd>
-                    <dt className="text-slate-500">{text(language, { ms: "Kod sekolah", en: "School code" })}</dt>
-                    <dd>{result.schoolCode || school.code}</dd>
-                    <dt className="text-slate-500">{text(language, { ms: "Guru kelas", en: "Class teacher" })}</dt>
-                    <dd className="min-h-10">{result.teacherName}</dd>
-                    <dt className="text-slate-500">{text(language, { ms: "Guru besar", en: "Headteacher" })}</dt>
-                    <dd className="min-h-10">{result.headteacherName || school.headteacher.name}</dd>
-                  </dl>
-                  <p className="mt-auto pt-4 text-sm text-slate-600">{result.students.length} {text(language, { ms: "murid", en: "pupils" })}</p>
-                  <div className="mt-4 flex gap-2 text-sm">
-                    <Link href={assessmentClassPath(period, result.className)} className="rounded-md border px-3 py-2">
-                      {text(language, { ms: "Buka kelas", en: "Open class" })}
-                    </Link>
-                    <Link href={`${assessmentClassPath(period, result.className)}/analysis`} className="action-accent">
-                      {text(language, { ms: "Analisis", en: "Analysis" })}
-                    </Link>
-                  </div>
-                </article>
+                <Card key={result.className} hover className="flex h-full flex-col">
+                  <CardContent className="flex h-full flex-col p-5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 text-primary-600"><UsersRound className="h-[18px] w-[18px]" aria-hidden="true" /></span>
+                      <h3 className="font-display text-lg font-semibold text-text-primary">{result.className}</h3>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 text-sm">
+                      <dt className="text-text-muted">{text(language, { ms: "Pentaksiran", en: "Assessment" })}</dt>
+                      <dd className="text-text-secondary">{result.assessmentName || label}</dd>
+                      <dt className="text-text-muted">{text(language, { ms: "Kod sekolah", en: "School code" })}</dt>
+                      <dd className="text-text-secondary">{result.schoolCode || school.code}</dd>
+                      <dt className="text-text-muted">{text(language, { ms: "Guru kelas", en: "Class teacher" })}</dt>
+                      <dd className="min-h-10 text-text-secondary">{result.teacherName}</dd>
+                      <dt className="text-text-muted">{text(language, { ms: "Guru besar", en: "Headteacher" })}</dt>
+                      <dd className="min-h-10 text-text-secondary">{result.headteacherName || school.headteacher.name}</dd>
+                    </dl>
+                    <p className="mt-auto pt-4 text-sm tabular-nums text-text-muted">{result.students.length} {text(language, { ms: "murid", en: "pupils" })}</p>
+                    <div className="mt-4 flex gap-2 text-sm">
+                      <Button variant="outline" size="sm" href={assessmentClassPath(period, result.className)}>
+                        {text(language, { ms: "Buka kelas", en: "Open class" })}
+                      </Button>
+                      <Button variant="primary" size="sm" href={`${assessmentClassPath(period, result.className)}/analysis`}>
+                        {text(language, { ms: "Analisis", en: "Analysis" })}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           </section>
@@ -114,9 +125,9 @@ export default async function AssessmentClassesPage({ params }: { params: Promis
         />
       </div>
       <div className="mt-6">
-        <Link href={`${assessmentBasePath(period)}/years`} className="rounded-md border px-3 py-2 text-sm">
+        <Button variant="outline" size="sm" href={`${assessmentBasePath(period)}/years`}>
           {text(language, { ms: "Lihat semua analisis tahun", en: "View all year analyses" })}
-        </Link>
+        </Button>
       </div>
     </AppShell>
   );

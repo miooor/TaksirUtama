@@ -112,41 +112,41 @@ export default async function SchoolInsightsPage({
           : "Ringkasan sekolah merentas subjek dan kelas."}`}
         icon={Telescope}
         actions={selectedBrief ? (
-          <Link href={`${selectedBrief.handoffHref}${selectedBrief.handoffHref.includes("?") ? "&" : "?"}${contextQuery}`} className="action-primary inline-flex items-center gap-2">
+          <Link href={`${selectedBrief.handoffHref}${selectedBrief.handoffHref.includes("?") ? "&" : "?"}${contextQuery}`} className="inline-flex items-center gap-2 rounded-lg border border-primary-700 bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800">
             Intervensi <ArrowRight className="h-4 w-4" />
           </Link>
         ) : null}
       />
 
-      <section className="mt-6 grid gap-3 rounded-lg border bg-white p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
+      <section className="mt-6 grid gap-3 rounded-xl border border-border-default bg-surface-card p-4 shadow-card md:grid-cols-[1fr_1fr_1fr_auto]">
         <form className="contents">
           <input type="hidden" name="year" value={selection.year} />
           <input type="hidden" name="semester" value={selection.semester} />
           <label className="grid gap-1 text-sm">
-            <span className="text-slate-500">Subjek</span>
-            <select name="subject" defaultValue={selectedBrief?.subjectCode ?? subject ?? ""} className="rounded-md border bg-white px-3 py-2">
+            <span className="text-text-muted">Subjek</span>
+            <select name="subject" defaultValue={selectedBrief?.subjectCode ?? subject ?? ""} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
               <option value="">Semua subjek</option>
               {subjects.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-slate-500">Tahun</span>
-            <select name="level" defaultValue={selectedYear ?? ""} className="rounded-md border bg-white px-3 py-2">
+            <span className="text-text-muted">Tahun</span>
+            <select name="level" defaultValue={selectedYear ?? ""} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
               <option value="">Semua tahun</option>
               {years.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="text-slate-500">Kelas</span>
-            <select name="className" defaultValue={selectedClass ?? ""} className="rounded-md border bg-white px-3 py-2">
+            <span className="text-text-muted">Kelas</span>
+            <select name="className" defaultValue={selectedClass ?? ""} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-primary shadow-raised focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-primary-500/20">
               <option value="">Semua kelas</option>
               {classes.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <div className="flex items-end gap-2">
-            <button className="action-primary w-full md:w-auto">Tapis</button>
+            <button className="inline-flex items-center justify-center rounded-lg border border-primary-700 bg-primary-700 px-4 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800 w-full md:w-auto">Tapis</button>
             {(subject || selectedYear || className) ? (
-              <Link href={`/insights?${contextQuery}`} className="rounded-md border px-3 py-2 text-sm">Reset</Link>
+              <Link href={`/insights?${contextQuery}`} className="rounded-lg border border-border-strong bg-surface-card px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-inset">Reset</Link>
             ) : null}
           </div>
         </form>
@@ -156,13 +156,13 @@ export default async function SchoolInsightsPage({
 
       {selectedBrief ? (
         <>
-          <section className="mt-6 rounded-lg border bg-white p-5">
+          <section className="mt-6 rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-teal-700">Agenda Ringkas Panitia</p>
-                <ol className="mt-3 grid gap-2 text-sm text-slate-700 md:grid-cols-4">
+                <p className="text-sm font-semibold text-primary-600">Agenda Ringkas Panitia</p>
+                <ol className="mt-3 grid gap-2 text-sm text-text-secondary md:grid-cols-4">
                   {["Dapatan utama", "Kelas perlu perhatian", "Murid sasaran", "Tindakan intervensi"].map((item, index) => (
-                    <li key={item} className="rounded-md bg-slate-50 px-3 py-2">{index + 1}. {item}</li>
+                    <li key={item} className="rounded-lg bg-surface-inset px-3 py-2">{index + 1}. {item}</li>
                   ))}
                 </ol>
               </div>
@@ -180,12 +180,12 @@ export default async function SchoolInsightsPage({
           </div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-            <section className="rounded-lg border bg-white p-5">
+            <section className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
               <div className="flex items-start gap-3">
-                <ClipboardList className="mt-1 h-5 w-5 text-teal-700" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600"><ClipboardList className="h-[18px] w-[18px]" aria-hidden="true" /></span>
                 <div>
-                  <p className="text-sm font-medium text-teal-700">Kenapa subjek ini dipilih</p>
-                  <p className="mt-2 text-sm text-slate-700">{selectedBrief.whySelected}</p>
+                  <p className="text-sm font-semibold text-primary-600">Kenapa subjek ini dipilih</p>
+                  <p className="mt-2 text-sm leading-5 text-text-secondary">{selectedBrief.whySelected}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {selectedBrief.confidenceNotes.map((note) => <StatusBadge key={note}>{note}</StatusBadge>)}
                   </div>
@@ -193,33 +193,33 @@ export default async function SchoolInsightsPage({
               </div>
             </section>
 
-            <section className="rounded-lg border bg-white p-5">
-              <h2 className="font-semibold">Cadangan Fokus Panitia</h2>
-              <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                {selectedBrief.focusSuggestions.map((item) => <li key={item} className="rounded-md bg-slate-50 px-3 py-2">{item}</li>)}
+            <section className="rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+              <h2 className="font-display font-semibold text-text-primary">Cadangan Fokus Panitia</h2>
+              <ul className="mt-3 space-y-2 text-sm text-text-secondary">
+                {selectedBrief.focusSuggestions.map((item) => <li key={item} className="rounded-lg bg-surface-inset px-3 py-2">{item}</li>)}
               </ul>
             </section>
           </div>
 
-          <section className="mt-6 rounded-lg border bg-white p-5">
-            <h2 className="text-lg font-semibold">Dapatan Utama Dialog Prestasi</h2>
+          <section className="mt-6 rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+            <h2 className="font-display text-lg font-semibold text-text-primary">Dapatan Utama Dialog Prestasi</h2>
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               {selectedBrief.findings.map((finding) => (
-                <article key={`${finding.category}-${finding.title}`} className="rounded-md border p-4">
+                <article key={`${finding.category}-${finding.title}`} className="rounded-lg border border-border-default p-4">
                   <StatusBadge tone={findingTone(finding)}>{finding.category}</StatusBadge>
-                  <h3 className="mt-3 font-semibold">{finding.title}</h3>
-                  <p className="mt-2 text-sm text-slate-700">{finding.evidence}</p>
+                  <h3 className="mt-3 font-semibold text-text-primary">{finding.title}</h3>
+                  <p className="mt-2 text-sm leading-5 text-text-secondary">{finding.evidence}</p>
                 </article>
               ))}
             </div>
           </section>
 
-          <section className="mt-6 rounded-lg border bg-white p-5">
-            <h2 className="text-lg font-semibold">Soalan Dialog</h2>
+          <section className="mt-6 rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+            <h2 className="font-display text-lg font-semibold text-text-primary">Soalan Dialog</h2>
             <ul className="mt-4 grid gap-3 lg:grid-cols-2">
               {selectedBrief.questions.map((question) => (
-                <li key={question.prompt} className="rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  <span className="font-medium text-slate-900">{question.focus.toUpperCase()}:</span> {question.prompt}
+                <li key={question.prompt} className="rounded-lg bg-surface-inset px-4 py-3 text-sm text-text-secondary">
+                  <span className="font-semibold text-text-primary">{question.focus.toUpperCase()}:</span> {question.prompt}
                 </li>
               ))}
             </ul>
@@ -236,20 +236,20 @@ export default async function SchoolInsightsPage({
               `${formatPercent(row.pbdLowPercentage)} (${row.pbdLowCount})`,
               `${formatPercent(row.pbdHighPercentage)} (${row.pbdHighCount})`,
               row.interventionCount,
-              <Link key={`${row.className}-handoff`} href={`/intervensi?subject=${encodeURIComponent(selectedBrief.pbdSubjectCode)}&className=${encodeURIComponent(row.className)}${row.year ? `&year=${row.year}` : ""}`} className="text-teal-700 underline">Buka</Link>,
+              <Link key={`${row.className}-handoff`} href={`/intervensi?subject=${encodeURIComponent(selectedBrief.pbdSubjectCode)}&className=${encodeURIComponent(row.className)}${row.year ? `&year=${row.year}` : ""}`} className="font-semibold text-primary-700 underline transition-colors hover:text-primary-800">Buka</Link>,
             ])}
           />
 
-          <section className="mt-6 rounded-lg border bg-white p-5">
-            <h2 className="text-lg font-semibold">Ringkasan Dialog Sedia Salin</h2>
-            <p className="mt-3 rounded-md bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+          <section className="mt-6 rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
+            <h2 className="font-display text-lg font-semibold text-text-primary">Ringkasan Dialog Sedia Salin</h2>
+            <p className="mt-3 rounded-lg bg-surface-inset p-4 text-sm leading-6 text-text-secondary">
               Dapatan {selectedBrief.subjectCode}: tahap perhatian {selectedBrief.attentionLevel.toLowerCase()}. {selectedBrief.metrics.upsaApplicable ? `UPSA lulus ${formatPercent(selectedBrief.metrics.upsaPassPercentage)}, ` : "PBD sahaja, "}PBD TP1+TP2 {formatPercent(selectedBrief.metrics.pbdLowPercentage)}, dan {selectedBrief.metrics.repeatedRiskPupils} murid risiko berulang. Fokus panitia: {selectedBrief.focusSuggestions.join(" ")}
             </p>
           </section>
         </>
       ) : (
         overview.subjectSummaries.length === 0 ? (
-          <p className="mt-6 rounded-lg border bg-white p-5 text-sm text-slate-600">
+          <p className="mt-6 rounded-xl border border-border-default bg-surface-card p-5 text-sm text-text-muted shadow-card">
             {text(language, { ms: "Tiada data UPSA + PBD sepadan untuk paparan ini.", en: "No matched UPSA + PBD data is available for this view." })}
           </p>
         ) : null
@@ -271,28 +271,28 @@ function OverviewSections({ overview, contextQuery }: { overview: DialogInsightO
         <MetricCard label="Kelas perhatian tinggi" value={highClasses} tone={highClasses ? "warning" : "success"} />
       </div>
 
-      <section className="mt-6 rounded-lg border bg-white p-5">
+      <section className="mt-6 rounded-xl border border-border-default bg-surface-card p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Dapatan Utama Semua Subjek</h2>
-            <p className="mt-1 text-sm text-slate-600">Satu dapatan ringkas bagi setiap subjek, disusun mengikut tahap perhatian.</p>
+            <h2 className="font-display text-lg font-semibold text-text-primary">Dapatan Utama Semua Subjek</h2>
+            <p className="mt-1 text-sm text-text-muted">Satu dapatan ringkas bagi setiap subjek, disusun mengikut tahap perhatian.</p>
           </div>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {overview.subjectSummaries.map((summary) => (
-            <article key={summary.subjectCode} className="rounded-md border p-4">
+            <article key={summary.subjectCode} className="rounded-lg border border-border-default p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge tone={summary.attentionLevel === "Tinggi" ? "warning" : summary.attentionLevel === "Pantau" ? "success" : "default"}>
                   {summary.attentionLevel}
                 </StatusBadge>
                 <StatusBadge>{summary.category}</StatusBadge>
               </div>
-              <h3 className="mt-3 font-semibold">{summary.subjectCode}</h3>
-              <p className="mt-2 text-sm text-slate-700">
+              <h3 className="mt-3 font-semibold text-text-primary">{summary.subjectCode}</h3>
+              <p className="mt-2 text-sm leading-5 text-text-secondary">
                 {summary.upsaApplicable ? `UPSA lulus ${formatPercent(summary.upsaPassPercentage)}, ` : "PBD sahaja, "}PBD TP1+TP2 {formatPercent(summary.pbdLowPercentage)}, PBD TP5+TP6 {formatPercent(summary.pbdHighPercentage)}.
                 {summary.weakestClass ? ` Kelas perhatian: ${summary.weakestClass}.` : ""}
               </p>
-              <Link href={`/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`} className="action-primary mt-4 inline-flex items-center gap-2">
+              <Link href={`/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-primary-700 bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white shadow-raised transition-colors hover:bg-primary-800">
                 Buka brief panitia <ArrowRight className="h-4 w-4" />
               </Link>
             </article>
@@ -393,7 +393,7 @@ function OverviewSections({ overview, contextQuery }: { overview: DialogInsightO
           `${formatPercent(summary.pbdHighPercentage)} (${summary.pbdHighCount})`,
           summary.confidence,
           summary.weakestClass ?? "-",
-          <Link key={`${summary.subjectCode}-brief`} href={`/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`} className="text-teal-700 underline">Brief</Link>,
+          <Link key={`${summary.subjectCode}-brief`} href={`/insights?${contextQuery}&subject=${encodeURIComponent(summary.subjectCode)}`} className="font-semibold text-primary-700 underline transition-colors hover:text-primary-800">Brief</Link>,
         ])}
       />
 
@@ -467,7 +467,7 @@ function SubjectClassEvidence({ selectedBrief }: { selectedBrief: DialogInsightB
           `${formatPercent(row.pbdLowPercentage)} (${row.pbdLowCount})`,
           `${formatPercent(row.pbdHighPercentage)} (${row.pbdHighCount})`,
           row.interventionCount,
-          <Link key={`${row.className}-handoff-top`} href={`/intervensi?subject=${encodeURIComponent(selectedBrief.pbdSubjectCode)}&className=${encodeURIComponent(row.className)}${row.year ? `&year=${row.year}` : ""}`} className="text-teal-700 underline">Buka</Link>,
+          <Link key={`${row.className}-handoff-top`} href={`/intervensi?subject=${encodeURIComponent(selectedBrief.pbdSubjectCode)}&className=${encodeURIComponent(row.className)}${row.year ? `&year=${row.year}` : ""}`} className="font-semibold text-primary-700 underline transition-colors hover:text-primary-800">Buka</Link>,
         ])}
       />
     </>
@@ -484,23 +484,23 @@ function SummaryTable({
   rows: Array<Array<React.ReactNode>>;
 }) {
   return (
-    <section className="mt-6 overflow-hidden rounded-lg border bg-white">
-      <div className="border-b px-5 py-4">
-        <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="mt-6 overflow-hidden rounded-xl border border-border-default bg-surface-card shadow-card">
+      <div className="border-b border-border-default px-5 py-4">
+        <h2 className="font-display text-lg font-semibold text-text-primary">{title}</h2>
       </div>
-      {rows.length === 0 ? <p className="px-5 py-4 text-sm text-slate-600">Tiada kelas sepadan untuk tapisan semasa.</p> : null}
+      {rows.length === 0 ? <p className="px-5 py-4 text-sm text-text-muted">Tiada kelas sepadan untuk tapisan semasa.</p> : null}
       <div className="overflow-x-auto">
         <table className="min-w-[58rem] w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-600">
+          <thead>
             <tr>
-              {headers.map((header) => <th key={header} className="px-4 py-3">{header}</th>)}
+              {headers.map((header) => <th key={header} className="whitespace-nowrap border-b border-border-default bg-surface-inset px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted">{header}</th>)}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={String(row[0])} className="border-t">
+              <tr key={String(row[0])} className="border-b border-border-default transition-colors last:border-b-0 hover:bg-surface-inset/60">
                 {row.map((cell, index) => (
-                  <td key={`${String(row[0])}-${headers[index]}`} className={`px-4 py-3 ${index === 0 ? "font-medium" : ""}`}>
+                  <td key={`${String(row[0])}-${headers[index]}`} className={`px-4 py-3 ${index === 0 ? "font-medium text-text-primary" : "text-text-secondary"}`}>
                     {cell}
                   </td>
                 ))}
