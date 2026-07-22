@@ -115,8 +115,18 @@ export function buildCombinedEvidence(
     const exam = examByClassSubject.get(key) ?? null;
     const pbd = pbdIndex.get(key) ?? null;
 
-    const totalPupilCount = enrolledByClassSubject.get(key) ?? exam?.matchedCount ?? 0;
-    const matchedPupilCount = matchedByClassSubject.get(key) ?? exam?.matchedCount ?? 0;
+    // When exam data is absent but PBD is present, derive coverage from PBD
+    // assessed counts so the PBD-only improving/declining path is reachable.
+    let totalPupilCount = enrolledByClassSubject.get(key) ?? exam?.matchedCount ?? 0;
+    let matchedPupilCount = matchedByClassSubject.get(key) ?? exam?.matchedCount ?? 0;
+
+    if (!exam && pbd) {
+      const pbdTotal = pbd.sem2?.total ?? pbd.sem1?.total ?? 0;
+      const pbdAssessed = pbdTotal - (pbd.sem2?.notAssessed ?? pbd.sem1?.notAssessed ?? 0);
+      totalPupilCount = pbdTotal;
+      matchedPupilCount = pbdAssessed;
+    }
+
     const coverageRatio = totalPupilCount > 0 ? matchedPupilCount / totalPupilCount : 0;
 
     rows.push({

@@ -69,11 +69,15 @@ export function buildProgressModel(input: ProgressInput): ProgressModel {
     const matchResult = matchPupils(upsaEntries, uasaEntries);
 
     pupilMovements = buildPupilMovements(matchResult.matched);
-    matchedInBoth = matchResult.matched.length;
+    // Count unique students, not student-subject pairs
+    matchedInBoth = new Set(matchResult.matched.map((m) => m.studentId)).size;
     upsaOnlyCount = matchResult.upsaOnly.length;
     uasaOnlyCount = matchResult.uasaOnly.length;
     unmatchedCount = matchResult.unmatched.length;
-    totalEnrolled = upsaEntries.length;
+    totalEnrolled = new Set([
+      ...upsaEntries.filter((e) => e.studentId).map((e) => e.studentId!),
+      ...uasaEntries.filter((e) => e.studentId).map((e) => e.studentId!),
+    ]).size;
 
     // Filter by level if specified
     const filtered = input.level !== null
@@ -173,15 +177,39 @@ export function buildProgressModel(input: ProgressInput): ProgressModel {
     }
   }
 
-  // Enrolled and matched counts by class-subject
+  // Enrolled and matched counts by class-subject.
+  // Denominator includes one-sided results (upsaOnly/uasaOnly) so coverage
+  // reflects the full cohort, not just the matched intersection.
   const enrolledByCS = new Map<string, number>();
   const matchedByCS = new Map<string, number>();
+
+  // Build enrolled counts from the union of all entries per class-subject
+  if (hasUpsa && hasUasa) {
+    const upsaEntries = flattenResults(input.upsaClassResults!);
+    const uasaEntries = flattenResults(input.uasaClassResults!);
+    const allEntries = [...upsaEntries, ...uasaEntries];
+    for (const entry of allEntries) {
+      if (!entry.studentId) continue;
+      const key = `${entry.className}|${entry.subjectCode}`;
+      enrolledByCS.set(key, (enrolledByCS.get(key) ?? 0) + 1);
+    }
+    // Deduplicate: each student counted once per class-subject
+    const seenPairs = new Map<string, Set<string>>();
+    for (const entry of allEntries) {
+      if (!entry.studentId) continue;
+      const key = `${entry.className}|${entry.subjectCode}`;
+      if (!seenPairs.has(key)) seenPairs.set(key, new Set());
+      seenPairs.get(key)!.add(entry.studentId);
+    }
+    for (const [key, students] of seenPairs) {
+      enrolledByCS.set(key, students.size);
+    }
+  }
+
   for (const agg of classSubjectMovements) {
     matchedByCS.set(agg.label, agg.matchedCount);
-    // Approximate enrolled from coverage ratio
-    if (agg.coverageRatio > 0) {
-      enrolledByCS.set(agg.label, Math.round(agg.matchedCount / agg.coverageRatio));
-    } else {
+    // Only set enrolled from aggregate if not already computed from raw entries
+    if (!enrolledByCS.has(agg.label)) {
       enrolledByCS.set(agg.label, agg.matchedCount);
     }
   }

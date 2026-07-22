@@ -2,6 +2,7 @@ import "server-only";
 import type { ActorContext } from "@/lib/auth/actor";
 import type { SchoolContext } from "@/lib/config/schools";
 import { resolveAssessmentPeriod, resolvePbdPeriod } from "@/lib/config/periods";
+import { isUasaDataAvailable } from "@/lib/config/uasaAvailability";
 import { getAllAssessmentClassResultsHybrid } from "@/lib/upsa/data";
 import { getAllPbdRecords } from "@/lib/pbd/data";
 import { DataSourceError } from "@/lib/dataSourceError";
@@ -42,19 +43,26 @@ export async function fetchProgressData(
   const pbdSem1Period = resolvePbdPeriod(pbdPeriods, year, "1");
   const pbdSem2Period = resolvePbdPeriod(pbdPeriods, year, "2");
 
+  // Enforce UASA availability: respect the configured release date.
+  const uasaReady = isUasaDataAvailable(uasaPeriod);
+
+  // Prevent legacy unsemestered PBD self-comparison: if both semesters
+  // resolve to the same period object, treat sem2 as absent.
+  const distinctPbdSemesters = pbdSem1Period && pbdSem2Period && pbdSem1Period !== pbdSem2Period;
+
   // Fetch all four data sources concurrently.
-  // Each returns null when the period is not configured.
+  // Each returns null when the period is not configured or not yet available.
   const [upsaResults, uasaResults, pbdSem1Raw, pbdSem2Raw] = await Promise.all([
     upsaPeriod
       ? safeFetch(() => getAllAssessmentClassResultsHybrid(context, upsaPeriod))
       : Promise.resolve(null),
-    uasaPeriod
+    uasaPeriod && uasaReady
       ? safeFetch(() => getAllAssessmentClassResultsHybrid(context, uasaPeriod))
       : Promise.resolve(null),
     pbdSem1Period
       ? safeFetch(() => getAllPbdRecords(school, pbdSem1Period))
       : Promise.resolve(null),
-    pbdSem2Period
+    distinctPbdSemesters && pbdSem2Period
       ? safeFetch(() => getAllPbdRecords(school, pbdSem2Period))
       : Promise.resolve(null),
   ]);
