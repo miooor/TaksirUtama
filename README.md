@@ -1,6 +1,6 @@
 # TaksirUtama
 
-The multi-school upgrade to `ssp-pentaksiran`: one Next.js application serving 10 schools with tenant-isolated UPSA, UASA, and PBD analysis.
+The multi-school upgrade to `taksir-utama`: one Next.js application serving 10 schools with tenant-isolated UPSA, UASA, and PBD analysis.
 
 ## Local setup
 

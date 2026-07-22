@@ -1,0 +1,2 @@
+[permissions]
+allow = ["Bash(cd /Users/roim/Documents/SSP && vercel whoami 2>&1 || echo \"Not authenticated\")", "Bash(cd /Users/roim/Documents/SSP && vercel project inspect taksir-utama 2>&1 | head -60)", "Bash(cd /Users/roim/Documents/SSP && vercel env ls 2>&1)", "Bash(cd /Users/roim/Documents/SSP && vercel git status 2>&1)", "Bash(cd /Users/roim/Documents/SSP && vercel domains 2>&1 && vercel alias ls 2>&1)", "explore"]

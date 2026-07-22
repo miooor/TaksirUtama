@@ -93,6 +93,9 @@ function classResult(className: string, mark: number): UpsaClassResult {
       validSubjectCount: 1,
       missingSubjects: [],
       absentSubjects: [],
+      studentId: null,
+      enrollmentId: null,
+      matchStatus: "unmatched" as const,
     }],
   };
 }

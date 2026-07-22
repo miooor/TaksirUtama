@@ -1,6 +1,6 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { requireDefaultUpsaContext } from "@/lib/defaultDataContext";
-import { getAssessmentClassResult } from "@/lib/upsa/data";
+import { getAssessmentClassResultWithRegistry } from "@/lib/upsa/data";
 import { SkspsUpsaSlipTemplate } from "@/pdf/templates/SkspsUpsaSlipTemplate";
 import { schoolReportFilename } from "@/lib/reportFilename";
 
@@ -8,9 +8,9 @@ export async function GET(
   _: Request,
   { params }: { params: Promise<{ className: string; studentId: string }> },
 ) {
-  const { school, period } = await requireDefaultUpsaContext();
+  const { context, school, period } = await requireDefaultUpsaContext();
   const { className, studentId } = await params;
-  const result = await getAssessmentClassResult(school, period, decodeURIComponent(className));
+  const result = await getAssessmentClassResultWithRegistry(context, period, decodeURIComponent(className));
   const student = result.students.find((item) => item.id === decodeURIComponent(studentId));
   if (!student) {
     return new Response("Student not found", { status: 404 });

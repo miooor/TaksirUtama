@@ -1,17 +1,17 @@
 import "server-only";
-import { requireSchoolContext } from "@/lib/auth";
+import { requireActorContext } from "@/lib/auth/actor";
 import { DataSourceError } from "@/lib/dataSourceError";
 
 export async function requireDefaultPbdContext() {
-  const school = await requireSchoolContext();
-  const period = school.defaultPbdPeriod;
+  const context = await requireActorContext();
+  const period = context.school.defaultPbdPeriod;
   if (!period) throw new DataSourceError("workbook_inaccessible", "PBD is not configured.", "pbd");
-  return { school, period };
+  return { context, school: context.school, period };
 }
 
 export async function requireDefaultUpsaContext() {
-  const school = await requireSchoolContext();
-  const period = school.defaultUpsaPeriod;
+  const context = await requireActorContext();
+  const period = context.school.defaultUpsaPeriod;
   if (!period) throw new DataSourceError("workbook_inaccessible", "UPSA is not configured.", "upsa");
-  return { school, period };
+  return { context, school: context.school, period };
 }

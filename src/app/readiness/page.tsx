@@ -5,27 +5,40 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DataReadinessPanel } from "@/components/pbd/DataReadinessPanel";
 import { getAllPbdRecords } from "@/lib/pbd/data";
 import { calculatePbdReadiness } from "@/lib/pbd/readiness";
-import { getAllAssessmentClassResults } from "@/lib/upsa/data";
-import { calculateUpsaReadiness } from "@/lib/upsa/readiness";
-import { requireSchoolContext } from "@/lib/auth";
+import { getAllAssessmentClassResultsWithRegistry } from "@/lib/upsa/data";
+import { calculateUpsaReadiness, detectUnmatchedStudents } from "@/lib/upsa/readiness";
+import { requireActorContext } from "@/lib/auth/actor";
 import { assessmentClassPath } from "@/lib/assessmentPages";
 import { ClipboardCheck, School } from "lucide-react";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { getLanguage, text } from "@/lib/i18n";
 import { getSchoolPreflightReport } from "@/lib/readiness/preflight";
+import { isDatabaseConfigured } from "@/lib/db/client";
+import { getSchoolRegistry } from "@/lib/db/schoolRegistry";
 
 export default async function ReadinessPage() {
-  const school = await requireSchoolContext();
+  const context = await requireActorContext();
+  const school = context.school;
   const { defaultPbdPeriod, defaultUpsaPeriod } = school;
-  const [pbdResult, upsaResult, preflight] = await Promise.all([
+  const dbConfigured = isDatabaseConfigured();
+  const [pbdResult, upsaResult, preflight, registry] = await Promise.all([
     defaultPbdPeriod ? getAllPbdRecords(school, defaultPbdPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
-    defaultUpsaPeriod ? getAllAssessmentClassResults(school, defaultUpsaPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
+    defaultUpsaPeriod ? getAllAssessmentClassResultsWithRegistry(context, defaultUpsaPeriod).then((data) => ({ data, error: null })).catch((error: Error) => ({ data: [], error })) : Promise.resolve({ data: [], error: null }),
     getSchoolPreflightReport(school),
+    dbConfigured && defaultUpsaPeriod ? getSchoolRegistry(context, String(defaultUpsaPeriod.year)) : Promise.resolve(null),
   ]);
   const pbdRecords = pbdResult.data;
   const upsaResults = upsaResult.data;
   const pbdReadiness = calculatePbdReadiness(pbdRecords);
   const upsaReadiness = calculateUpsaReadiness(upsaResults);
+  // Only surface unmatched-student findings when a populated academic-year
+  // roster exists. Without enrollments, parseUpsaClassSheet leaves every pupil
+  // "unmatched", which would otherwise warn for schools that simply have not
+  // imported a roster yet (cannot distinguish "no roster" from real mismatches).
+  const hasRoster = registry !== null && registry.enrollments.length > 0;
+  const unmatchedFindings = hasRoster
+    ? upsaResults.flatMap((result) => detectUnmatchedStudents(result))
+    : [];
   const language = await getLanguage();
 
   return (
@@ -66,6 +79,21 @@ export default async function ReadinessPage() {
         </div>
         {pbdResult.error || upsaResult.error ? <p className="mt-4 text-sm font-medium text-rose-700" role="alert">Sebahagian analisis dikunci sehingga isu data di atas diselesaikan.</p> : null}
       </section>
+
+      {unmatchedFindings.length > 0 ? (
+        <section className="mt-6 rounded-lg border bg-white p-5">
+          <h2 className="text-lg font-semibold">Padanan daftar murid</h2>
+          <p className="mt-1 text-sm text-slate-600">Murid dalam sheet pentaksiran yang tidak sepadan dengan daftar sekolah.</p>
+          <ul className="mt-4 space-y-3 text-sm">
+            {unmatchedFindings.map((finding) => (
+              <li key={`${finding.code}:${finding.location}`} className="rounded-md bg-amber-50 p-3">
+                <p className="font-medium">{finding.location}: {finding.message}</p>
+                <p className="mt-1 text-slate-600">{finding.action}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="mt-6">
         <DataReadinessPanel readiness={pbdReadiness} language={language} />

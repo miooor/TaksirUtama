@@ -131,6 +131,9 @@ function upsaClass(className: string, subjects: UpsaSubjectResult[]): UpsaClassR
       validSubjectCount: subjectItem.mark === null ? 0 : 1,
       missingSubjects: [],
       absentSubjects: [],
+      studentId: null,
+      enrollmentId: null,
+      matchStatus: "unmatched" as const,
     })),
   };
 }

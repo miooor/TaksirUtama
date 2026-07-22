@@ -1,15 +1,15 @@
 import { notFound } from "next/navigation";
-import { requireSchoolContext } from "@/lib/auth";
+import { requireActorContext } from "@/lib/auth/actor";
 import { resolveAssessmentPeriod } from "@/lib/config/periods";
 
 export async function getAssessmentApiContext(params: Promise<{ year: string; assessment: string }>) {
   const { year, assessment } = await params;
-  const school = await requireSchoolContext();
-  const period = resolveAssessmentPeriod(school.assessmentPeriods, year, assessment);
+  const context = await requireActorContext();
+  const period = resolveAssessmentPeriod(context.school.assessmentPeriods, year, assessment);
   if (!period) {
     notFound();
   }
-  return { school, period };
+  return { context, school: context.school, period };
 }
 
 export async function getAssessmentApiPeriod(params: Promise<{ year: string; assessment: string }>) {

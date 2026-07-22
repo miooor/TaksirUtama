@@ -1,0 +1,9 @@
+[
+  {
+    "fingerprint": "here-s-the-step-1-audit-based-on-what-the-vercel-cli-was",
+    "summary": "Here's the Step 1 audit based on what the Vercel CLI was able to retrieve before the sandbox restricted further access:",
+    "first_seen_iteration": 1,
+    "last_seen_iteration": 1,
+    "count": 1
+  }
+]

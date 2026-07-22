@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseUpsaClassSheet } from "@/lib/upsa/parseUpsaClassSheet";
+import type { SchoolRegistry } from "@/types/registry";
 
 describe("parseUpsaClassSheet", () => {
   it("parses the row 6-10 class metadata and accepts SUBJEK as the pupil-name column header", () => {
@@ -81,5 +82,97 @@ describe("parseUpsaClassSheet", () => {
       absentSubjects: [],
     });
     expect(result.students.find((student) => student.name === "Marked Pupil")?.subjects.map((subject) => subject.status)).toEqual(["marked", "marked", "marked"]);
+  });
+
+  describe("registry matching", () => {
+    const registry: SchoolRegistry = {
+      schoolId: "school-1",
+      year: "2026",
+      academicYearId: "ay-1",
+      students: [
+        { id: "s-1", pupilCode: "P001", displayName: "MURID CONTOH", normalizedName: "MURID CONTOH", active: true },
+        { id: "s-2", pupilCode: "P002", displayName: "MURID LAIN", normalizedName: "MURID LAIN", active: true },
+        { id: "s-3", pupilCode: "P003", displayName: "MURID KEMBAR", normalizedName: "MURID KEMBAR", active: true },
+        { id: "s-4", pupilCode: "P004", displayName: "MURID KEMBAR", normalizedName: "MURID KEMBAR", active: true },
+        { id: "s-5", pupilCode: "P005", displayName: "MURID TAK AKTIF", normalizedName: "MURID TAK AKTIF", active: false },
+      ],
+      enrollments: [
+        { id: "e-1", studentId: "s-1", classId: "c-angsana", className: "4 ANGSANA", academicYearId: "ay-1", rosterNumber: 1, active: true, student: { id: "s-1", pupilCode: "P001", displayName: "MURID CONTOH", normalizedName: "MURID CONTOH", active: true } },
+        { id: "e-2", studentId: "s-2", classId: "c-angsana", className: "4 ANGSANA", academicYearId: "ay-1", rosterNumber: 2, active: true, student: { id: "s-2", pupilCode: "P002", displayName: "MURID LAIN", normalizedName: "MURID LAIN", active: true } },
+        { id: "e-3", studentId: "s-3", classId: "c-angsana", className: "4 ANGSANA", academicYearId: "ay-1", rosterNumber: 3, active: true, student: { id: "s-3", pupilCode: "P003", displayName: "MURID KEMBAR", normalizedName: "MURID KEMBAR", active: true } },
+        { id: "e-4", studentId: "s-4", classId: "c-angsana", className: "4 ANGSANA", academicYearId: "ay-1", rosterNumber: 4, active: true, student: { id: "s-4", pupilCode: "P004", displayName: "MURID KEMBAR", normalizedName: "MURID KEMBAR", active: true } },
+        { id: "e-5", studentId: "s-5", classId: "c-angsana", className: "4 ANGSANA", academicYearId: "ay-1", rosterNumber: 5, active: false, student: { id: "s-5", pupilCode: "P005", displayName: "MURID TAK AKTIF", normalizedName: "MURID TAK AKTIF", active: false } },
+      ],
+    };
+
+    it("matches a student by normalized name", () => {
+      const result = parseUpsaClassSheet([
+        ["BIL", "SUBJEK", "BM", "GRED"],
+        ["", "", 100, ""],
+        [1, "Murid Contoh", 82, "A"],
+      ], "4 ANGSANA", registry);
+
+      expect(result.students[0]).toMatchObject({
+        studentId: "s-1",
+        enrollmentId: "e-1",
+        matchStatus: "matched",
+      });
+    });
+
+    it("marks unmatched when student not in registry", () => {
+      const result = parseUpsaClassSheet([
+        ["BIL", "SUBJEK", "BM", "GRED"],
+        ["", "", 100, ""],
+        [1, "MURID TIADA", 82, "A"],
+      ], "4 ANGSANA", registry);
+
+      expect(result.students[0]).toMatchObject({
+        studentId: null,
+        enrollmentId: null,
+        matchStatus: "unmatched",
+      });
+    });
+
+    it("marks ambiguous when two students share the same normalized name", () => {
+      const result = parseUpsaClassSheet([
+        ["BIL", "SUBJEK", "BM", "GRED"],
+        ["", "", 100, ""],
+        [1, "Murid Kembar", 82, "A"],
+      ], "4 ANGSANA", registry);
+
+      expect(result.students[0]).toMatchObject({
+        studentId: null,
+        enrollmentId: null,
+        matchStatus: "ambiguous",
+      });
+    });
+
+    it("ignores inactive enrollments", () => {
+      const result = parseUpsaClassSheet([
+        ["BIL", "SUBJEK", "BM", "GRED"],
+        ["", "", 100, ""],
+        [1, "Murid Tak Aktif", 82, "A"],
+      ], "4 ANGSANA", registry);
+
+      expect(result.students[0]).toMatchObject({
+        studentId: null,
+        enrollmentId: null,
+        matchStatus: "unmatched",
+      });
+    });
+
+    it("works without a registry (backward compat)", () => {
+      const result = parseUpsaClassSheet([
+        ["BIL", "SUBJEK", "BM", "GRED"],
+        ["", "", 100, ""],
+        [1, "MURID CONTOH", 82, "A"],
+      ], "4 ANGSANA");
+
+      expect(result.students[0]).toMatchObject({
+        studentId: null,
+        enrollmentId: null,
+        matchStatus: "unmatched",
+      });
+    });
   });
 });

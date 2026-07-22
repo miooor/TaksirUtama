@@ -1,5 +1,32 @@
 import type { UpsaClassResult } from "@/types/upsa";
 import { getRequiredUpsaMarkCells } from "@/lib/upsa/subjectPolicy";
+import type { DataContractFinding } from "@/lib/readiness/dataContracts";
+
+export function detectUnmatchedStudents(classResult: UpsaClassResult): DataContractFinding[] {
+  const unmatched = classResult.students.filter((s) => s.matchStatus === "unmatched");
+  const ambiguous = classResult.students.filter((s) => s.matchStatus === "ambiguous");
+  if (unmatched.length === 0 && ambiguous.length === 0) return [];
+  const findings: DataContractFinding[] = [];
+  if (unmatched.length > 0) {
+    findings.push({
+      severity: "warning",
+      code: "registry_unmatched",
+      location: classResult.className,
+      message: `${unmatched.length} murid dalam ${classResult.className} tidak sepadan dengan daftar murid.`,
+      action: "Padankan nama murid dalam sheet dengan daftar sekolah atau kemas kini daftar.",
+    });
+  }
+  if (ambiguous.length > 0) {
+    findings.push({
+      severity: "warning",
+      code: "registry_ambiguous",
+      location: classResult.className,
+      message: `${ambiguous.length} murid dalam ${classResult.className} mempunyai nama yang bercanggah dalam daftar.`,
+      action: "Gunakan kod murid atau nombor bil untuk membezakan murid dengan nama yang sama.",
+    });
+  }
+  return findings;
+}
 
 export function calculateUpsaReadiness(results: UpsaClassResult[]) {
   const subjectMap = new Map<string, { entered: number; missing: number; absent: number }>();

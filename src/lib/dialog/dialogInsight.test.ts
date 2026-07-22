@@ -205,6 +205,9 @@ function upsaClass(className: string, subjectCode: string, marks: number[]): Ups
       validSubjectCount: 1,
       missingSubjects: [],
       absentSubjects: [],
+      studentId: null,
+      enrollmentId: null,
+      matchStatus: "unmatched" as const,
     })),
   };
 }

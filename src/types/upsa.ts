@@ -7,6 +7,8 @@ export type UpsaSubjectResult = {
   status: "marked" | "missing" | "absent";
 };
 
+import type { StudentMatchStatus } from "@/types/registry";
+
 export type UpsaStudentResult = {
   id: string;
   bil: string;
@@ -19,6 +21,9 @@ export type UpsaStudentResult = {
   validSubjectCount: number;
   missingSubjects: string[];
   absentSubjects: string[];
+  studentId: string | null;
+  enrollmentId: string | null;
+  matchStatus: StudentMatchStatus;
 };
 
 export type UpsaClassResult = {
