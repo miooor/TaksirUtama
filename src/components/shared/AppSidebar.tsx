@@ -52,6 +52,7 @@ function buildNavGroups(year: string, semester: string, pathname: string, canMan
         { label: "Analisis UPSA", href: `/assessments/${year}/upsa/classes`, icon: BarChart3, active: pathname.includes("/upsa/classes") },
         { label: "Analisis UASA", href: `/assessments/${year}/uasa/classes`, icon: TrendingUp, active: pathname.includes("/uasa/classes") },
         { label: "Analisis PBD", href: `/pbd/periods/${year}?semester=${semester}`, icon: PieChart, active: pathname.startsWith("/pbd/periods") },
+        { label: "Kemajuan", href: `/progress?year=${year}`, icon: TrendingUp, active: pathname.startsWith("/progress") },
       ],
     },
     {
