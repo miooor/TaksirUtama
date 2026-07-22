@@ -113,4 +113,30 @@ describe("PBD entry action authorization", () => {
     const result = await createPbdClassAction({}, new FormData());
     expect(result.success).toBe("Kelas ditambah.");
   });
+
+  it("surfaces stale-revision conflicts from the database as recoverable feedback", async () => {
+    vi.mocked(saveDatabasePbdSubjectEntries).mockRejectedValueOnce(
+      Object.assign(new Error("Rekod telah dikemas kini. Muat semula sebelum menyimpan."), { code: "P0001" }),
+    );
+    const result = await savePbdSubjectEntriesAction({}, bulkFormData("subject"));
+    expect(result.error).toBe("Rekod telah dikemas kini. Muat semula sebelum menyimpan.");
+    expect(result.success).toBeUndefined();
+  });
+
+  it("keeps finalized records immutable until reopened with actionable guidance", async () => {
+    vi.mocked(saveDatabasePbdClassEntries).mockRejectedValueOnce(
+      Object.assign(new Error("Buka semula rekod muktamad sebelum mengubahnya."), { code: "P0001" }),
+    );
+    const result = await savePbdClassEntriesAction({}, bulkFormData("class"));
+    expect(result.error).toBe("Buka semula rekod muktamad sebelum mengubahnya.");
+    expect(result.success).toBeUndefined();
+  });
+
+  it("falls back to the generic recoverable message for other database codes", async () => {
+    vi.mocked(saveDatabasePbdClassEntries).mockRejectedValueOnce(
+      Object.assign(new Error("check constraint violated"), { code: "23514" }),
+    );
+    const result = await savePbdClassEntriesAction({}, bulkFormData("class"));
+    expect(result.error).toBe("Data tidak dapat disimpan. Semak maklumat kelas dan cuba semula.");
+  });
 });

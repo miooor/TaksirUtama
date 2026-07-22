@@ -19,6 +19,10 @@ export type PbdActionState = { error?: string; success?: string; changedCount?: 
 
 function message(error: unknown) {
   if (error && typeof error === "object" && "code" in error) {
+    // P0001 carries the deliberate Malay guidance raised by the pbd_save_*
+    // functions (stale revision, finalized record, closed period), so surface
+    // it directly; other database codes get the generic recoverable message.
+    if (String(error.code) === "P0001" && error instanceof Error && error.message) return error.message;
     return "Data tidak dapat disimpan. Semak maklumat kelas dan cuba semula.";
   }
   return error instanceof Error ? error.message : "Tindakan tidak dapat disimpan. Cuba lagi.";

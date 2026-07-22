@@ -4,7 +4,7 @@ import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { DashboardSettingsMenu } from "@/components/shared/DashboardSettingsMenu";
 import { SiteFooter } from "@/components/shared/SiteFooter";
 import { YearMenu } from "@/components/shared/YearMenu";
-import { requireSchoolContext } from "@/lib/auth";
+import { requireActorContext } from "@/lib/auth/actor";
 import { listPeriodYears } from "@/lib/config/periods";
 import { isUasaDataAvailable } from "@/lib/config/uasaAvailability";
 import { getLanguage } from "@/lib/i18n";
@@ -13,7 +13,9 @@ import { ClerkLogoutButton } from "@/components/auth/ClerkLogoutButton";
 
 export async function AppShell({ children, chrome = true }: { children: React.ReactNode; chrome?: boolean }) {
   const language = await getLanguage();
-  const school = chrome ? await requireSchoolContext() : null;
+  const context = chrome ? await requireActorContext() : null;
+  const school = context?.school ?? null;
+  const canManageSetup = context?.actor.role === "school_admin" || context?.actor.role === "platform_admin";
   const assessmentPeriods = school?.assessmentPeriods ?? [];
   const pbdPeriods = school?.pbdPeriods ?? [];
   const defaultUpsaPeriod = school?.defaultUpsaPeriod ?? null;
@@ -28,7 +30,7 @@ export async function AppShell({ children, chrome = true }: { children: React.Re
     .map((period) => period.year);
   return (
     <div className="min-h-screen lg:flex">
-      {chrome ? <AppSidebar schoolName={school!.name} systemName={school!.systemName} logoPath={school!.logoPath} year={defaultYear} controls={<>
+      {chrome ? <AppSidebar schoolName={school!.name} systemName={school!.systemName} logoPath={school!.logoPath} year={defaultYear} canManageSetup={canManageSetup} controls={<>
               <YearMenu
                 language={language}
                 years={years}
